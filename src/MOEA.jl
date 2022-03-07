@@ -121,5 +121,6 @@ include("algorithms/moea.jl")
 include("problems/type.jl")
 include("problems/ZDT.jl")
 include("problems/CEC2018.jl")
+include("problems/Sphere.jl")
 
 end
