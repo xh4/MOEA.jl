@@ -49,6 +49,8 @@ export optimize,
     ZDT4,
     ZDT6,
     truepf,
+    sphere,
+    ackley,
     ### ALGORITHM
     GA,
     NSGA2,
@@ -122,5 +124,6 @@ include("problems/type.jl")
 include("problems/ZDT.jl")
 include("problems/CEC2018.jl")
 include("problems/Sphere.jl")
+include("problems/Ackley.jl")
 
 end
