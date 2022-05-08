@@ -31,8 +31,7 @@ ga = GA(populationSize=100,
 
 result = optimize(sphere,
                   ga,
-				  population = [Individual([2.0, 2.0]) for i in 1:ga.populationSize],
-				  options = MOEA.Options(store_trace=true))
+		  population = [Individual([2.0, 2.0]) for i in 1:ga.populationSize])
 ```
 
 ## MOEA/D
@@ -44,11 +43,10 @@ constraints = BoxConstraints(bounds[1,:], bounds[2,:])
 
 method = MOEAD(N=100)
 
-result = optimize(zdt,
-                  method,
-                  constraints = constraints,
-			      population = [Individual([rand() for d in 1:30]) for i in 1:100],
-                  options = MOEA.Options(iterations=200, store_trace=true))
+moead = optimize(zdt,
+		 moead,
+		 constraints = constraints,
+		 population = [Individual([rand() for d in 1:30]) for i in 1:100])
 ```
 
 
