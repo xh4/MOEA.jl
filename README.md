@@ -1,6 +1,6 @@
 # MOEA
 
-Multiobjective Evolutionary Algorithms in Julia
+Multi-Objective Evolutionary Algorithms in Julia
 
 ## Algorithms
 
