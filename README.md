@@ -2,6 +2,8 @@
 
 Multi-Objective Evolutionary Algorithms in Julia
 
+![GUI](https://user-images.githubusercontent.com/2956767/167279831-2943130e-e8e3-4bba-8c41-a31089c30ea9.png)
+
 ## Algorithms
 
 - NSGA-II
