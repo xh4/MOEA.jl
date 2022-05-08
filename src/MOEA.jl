@@ -1,7 +1,6 @@
 module MOEA
 
 using Random, LinearAlgebra, Statistics
-using Base: @kwdef
 using TOML
 using JLD
 using UnPack: @unpack
@@ -15,8 +14,8 @@ using NLSolversBase:
     AbstractConstraints,
     nconstraints_x,
     nconstraints
-using RedefStructs: @redef
 using Infiltrator: @infiltrate
+using Colors
 import NLSolversBase: f_calls, value, value!
 import Base:
     show,
@@ -31,17 +30,41 @@ import Base:
     copyto!,
     setindex!,
     replace,
-    print
+    print,
+    sortperm,
+    sortperm!
+import Distances:
+    pairwise,
+    Euclidean
+using CImGui
+using CImGui.GLFWBackend
+using CImGui.OpenGLBackend
+using CImGui.GLFWBackend.GLFW
+using CImGui.OpenGLBackend.ModernGL
+using CImGui.CSyntax
+using CImGui.CSyntax.CStatic
+using ImGuiGLFWBackend
+using ImGuiOpenGLBackend
+using LibCImGui
+using GLFW
+using Images
+using TestImages
+using ColorTypes
 
 export optimize,
     ### TYPE
     Individual,
     Population,
     Objective,
-    variable,
-    objective,
-    ### Constraint
+    variables,
+    objectives,
+    constraints,
+    ### CONSTRAINT
     BoxConstraints,
+    ### METRIC
+    gd,
+    igd,
+    FPL,
     ### TEST PROBLEM
     ZDT1,
     ZDT2,
@@ -53,7 +76,12 @@ export optimize,
     ackley,
     ### ALGORITHM
     GA,
-    NSGA2,
+    DE,
+    NSGAII,
+    MOEAD,
+    MOEADDE,
+    SMSEMOA,
+    pfront,
     ### SELECTION
     ranklinear,
     uniformranking,
@@ -108,22 +136,33 @@ include("objective.jl")
 include("options.jl")
 include("termination.jl")
 include("result.jl")
-include("utilities.jl")
 include("constraints.jl")
 include("optimize.jl")
-
-include("algorithms/ga.jl")
-include("algorithms/nsga2.jl")
+include("FPL.jl")
 
 include("algorithms/selection.jl")
 include("algorithms/crossover.jl")
 include("algorithms/mutation.jl")
 include("algorithms/moea.jl")
 
+include("algorithms/GA.jl")
+include("algorithms/DE.jl")
+include("algorithms/NSGA-II.jl")
+include("algorithms/MOEA-D.jl")
+include("algorithms/MOEA-D-DE.jl")
+include("algorithms/SMS-EMOA.jl")
+
 include("problems/type.jl")
 include("problems/ZDT.jl")
+include("problems/DTLZ.jl")
 include("problems/CEC2018.jl")
-include("problems/Sphere.jl")
-include("problems/Ackley.jl")
+include("problems/sphere.jl")
+include("problems/ackley.jl")
+
+include("utilities.jl")
+
+include("gui/utils.jl")
+include("gui/playground.jl")
+include("gui/gui.jl")
 
 end

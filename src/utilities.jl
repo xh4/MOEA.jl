@@ -132,20 +132,20 @@ function draw_convergence(result::OptimizationResult, directory)
 end
 
 function draw_generations(result::OptimizationResult, directory=pwd())
-    images_directory = joinpath(directory, "generations")
+    images_directory = joinpath(directory, "tmp", "generations")
     mkpath(images_directory)
     gen = 0
     anim = @animate for state in result.trace
         gen += 1
         println("Plotting generation $(gen) / $(length(result.trace))")
         for i in state.population
-            if length(variable(i)) > 3 || length(variable(i)) < 2
-                error("Can't draw individual with dimensions of $(length(variable(i)))")
+            if length(variables(i)) > 3 || length(variables(i)) < 2
+                error("Can't draw individual with dimensions of $(length(variables(i)))")
             end
         end
         fig = Plots.plot(
-            [variable(i)[1] for i in state.population],
-            [variable(i)[2] for i in state.population],
+            [variables(i)[1] for i in state.population],
+            [variables(i)[2] for i in state.population],
             seriestype = :scatter,
             title = "Generation $(gen)",
         )
@@ -157,31 +157,82 @@ function draw_generations(result::OptimizationResult, directory=pwd())
     gif(anim, joinpath(directory, "generations.gif"), fps = 15, loop = 1)
 end
 
-function draw_objectives(result::OptimizationResult, directory=pwd())
-    images_directory = joinpath(directory, "objectives")
+function draw_pareto_fronts(result::OptimizationResult, directory=pwd())
+    images_directory = joinpath(directory, "tmp", "objectives")
     mkpath(images_directory)
     gen = 0
-    anim = @animate for state in result.trace
+    anim = @animate for state in result.trace[2:end]
         gen += 1
-        println("Plotting generation $(gen) / $(length(result.trace))")
-        fig = Plots.plot(
-            objective(state.pfront)[:, 1],
-            objective(state.pfront)[:, 2],
-            seriestype = :scatter,
-            title = "Generation $(gen)",
-            legend = false,
-        )
+        # println("Plotting generation $(gen) / $(length(result.trace))")
+        mF = maxF(Population(state.population))
+        F = calcF(Population(state.population))
+        cols = distinguishable_colors(mF, [RGB(1,1,1), RGB(0,0,0)], dropseed=false)
+        fig = nothing
+        for i = 1:length(F)
+            f = F[i]
+            if length(f) == 0
+                continue
+            end
+            if i == 1
+                fig = Plots.plot(
+                    objectives(Population(state.population[f]))[:, 1],
+                    objectives(Population(state.population[f]))[:, 2],
+                    seriestype = :scatter,
+                    color = cols[i],
+                    title = "Generation $(gen)",
+                    legend = false,
+                )
+            else
+                Plots.plot!(
+                    objectives(Population(state.population[f]))[:, 1],
+                    objectives(Population(state.population[f]))[:, 2],
+                    seriestype = :scatter,
+                    color = cols[i]
+                )
+            end
+        end
         # xlims!((0, 5))
         # ylims!((0, 5))
         savefig(fig, joinpath(images_directory, "$(gen).png"))
     end
-    gif(anim, joinpath(directory, "objectives.gif"), fps = 20, loop = 1)
+    gif(anim, joinpath(images_directory, "objectives.gif"), fps = 20, loop = 1)
+end
+
+function draw_objectives(result::OptimizationResult, directory=pwd())
+    images_directory = joinpath(directory, "tmp", "objectives")
+    mkpath(images_directory)
+    gen = 0
+    anim = @animate for state in result.trace[2:end]
+        gen += 1
+        # println("Plotting generation $(gen) / $(length(result.trace))")
+        fig = Plots.plot(
+            objectives(Population(pfront(state)))[:, 1],
+            objectives(Population(pfront(state)))[:, 2],
+            seriestype = :scatter,
+            title = "Generation $(gen)",
+            legend = false,
+        )
+        savefig(fig, joinpath(images_directory, "$(gen).png"))
+    end
+    gif(anim, joinpath(images_directory, "objectives.gif"), fps = 20, loop = 1)
 end
 
 function draw_metrics(result::OptimizationResult)
     plot(
         1:length(result.trace),
-        [state.metrics[2].Δ for state in result.trace],
+        [state.metrics[2].value for state in result.trace],
         legend = false,
     )
+end
+
+function draw_igd(result, truepf)
+    Plots.plot(
+        1:length(result.trace),
+        [state_igd(state, truepf) for state in result.trace],
+        legend = false,
+    )
+end
+
+function state_igd(state, truepf)
+    igd(pfront(state), truepf)
 end

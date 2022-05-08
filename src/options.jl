@@ -12,7 +12,7 @@ There are following options available:
 - `parallelization::Symbol`: allows parallelization of the population fitness evaluation if set to `:thread` using multiple threads (*default: `:serial`*)
 - `rng::AbstractRNG`: a random number generator object that is used to control generation of random data during the evolutionary optimization (*default: `Random.default_rng()`*)
 """
-@kwdef struct Options{TCallback<:Union{Nothing,Function},TRNG<:AbstractRNG}
+Base.@kwdef struct Options{TCallback<:Union{Nothing,Function},TRNG<:AbstractRNG}
     abstol::Float64 = Inf
     reltol::Float64 = Inf
     successive_f_tol::Int = 10
@@ -24,6 +24,7 @@ There are following options available:
     time_limit::Float64 = NaN
     parallelization::Symbol = :serial
     rng::TRNG = Random.default_rng()
+    state_callback = nothing
 end
 
 function show(io::IO, o::Options)

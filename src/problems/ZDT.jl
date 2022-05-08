@@ -33,6 +33,8 @@ function ZDT1(m = 30, n_solutions = 100)
     X = [vcat(x[i], zeros(m - 1)) for i in 1:n_solutions]
     pareto_set = [ Individual(x, f(x)) for x in X ]
 
+    # @infiltrate
+
     return f, bounds, pareto_set
 end
 
@@ -69,13 +71,17 @@ function ZDT3(D = 30, n_solutions = 100)
     end
     bounds = Array([zeros(D) ones(D)]')
 
+    if n_solutions < 6
+        n_solutions = 6
+    end
+
     regions = [ 0 0.0830015349
                 0.182228780 0.2577623634
                 0.4093136748 0.4538821041
                 0.6183967944 0.6525117038
                 0.8233317983 0.8518328654]
 
-    n = n_solutions ÷ size(regions, 1)
+    n = Int(ceil(n_solutions / size(regions, 1)))
     x = Float64[]
     for i in 1:size(regions, 1)
         x = vcat(x, range(regions[i,1], regions[i,2], length=n))
@@ -85,7 +91,6 @@ function ZDT3(D = 30, n_solutions = 100)
     pareto_set = [ Individual(xx, f(xx)) for xx in x ]
 
     return f, bounds, get_non_dominated_solutions(pareto_set)
-
 end
 
 abstract type ZDT4 <: ZDT end

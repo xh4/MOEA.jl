@@ -1,109 +1,27 @@
-"""
-    optimize(f[, F], individual, algorithm[, opts])
-    optimize(f[, F], constraints, algorithm[, opts])
-    optimize(f[, F], constraints, individual, algorithm[, opts])
-    optimize(f[, F], constraints, algorithm, population[, opts])
-
-- 对于多目标优化，目标值 `F` 必须提供.
-"""
-optimize(
-    f::TC,
-    individual,
-    method::M,
-    opts::Options = Options(; default_options(method)...),
-) where {TC,M<:Optimizer} = optimize(f::TC, NoConstraints(), individual, method, opts)
-optimize(
-    f,
-    F::AbstractVector,
-    individual,
-    method::M,
-    opts::Options = Options(; default_options(method)...),
-) where {TC,M<:Optimizer} = optimize(f, F, NoConstraints(), individual, method, opts)
-optimize(
-    f::TC,
-    bounds::ConstraintBounds,
-    method::M,
-    opts::Options = Options(; default_options(method)...),
-) where {TC,M<:Optimizer} = optimize(f, BoxConstraints(bounds), method, opts)
-optimize(
-    f::TC,
-    F::TF,
-    bounds::ConstraintBounds,
-    method::M,
-    opts::Options = Options(; default_options(method)...),
-) where {TC,TF,M<:Optimizer} = optimize(f, F, BoxConstraints(bounds), method, opts)
 function optimize(
-    f::TC,
-    constraints::C,
-    method::M,
-    opts::Options = Options(; default_options(method)...),
-) where {TC,M<:Optimizer,C<:AbstractConstraints}
-    population = Population(method, bounds(constraints), rng = opts.rng)
-    optimize(f, constraints, method, population, opts)
-end
-function optimize(
-    f::TC,
-    F::TF,
-    constraints::C,
-    method::M,
-    opts::Options = Options(; default_options(method)...),
-) where {TC,TF,M<:Optimizer,C<:AbstractConstraints}
-    population = Population(method, bounds(constraints), rng = opts.rng)
-    optimize(f, F, constraints, method, population, opts)
-end
-function optimize(
-    f::TC,
-    constraints::C,
-    individual,
-    method::M,
-    opts::Options = Options(; default_options(method)...),
-) where {TC,M<:Optimizer,C<:AbstractConstraints}
-    population = Population(method, individual, rng = opts.rng)
-    optimize(f, constraints, method, population, opts)
-end
-function optimize(
-    f::TC,
-    F::TF,
-    constraints::C,
-    individual,
-    method::M,
-    opts::Options = Options(; default_options(method)...),
-) where {TC,TF,M<:Optimizer,C<:AbstractConstraints}
-    population = Population(method, individual, rng = opts.rng)
-    optimize(f, F, constraints, method, population, opts)
-end
-function optimize(
-    f::TC,
-    constraints::C,
-    method::M,
-    population,
-    opts::Options = Options(; default_options(method)...),
-) where {TC,M<:Optimizer,C<:AbstractConstraints}
-    @assert length(population) > 0 "Population is empty"
-    obj = Objective(f, first(population))
-    optimize(obj, constraints, method, population, opts)
-end
-function optimize(
-    f::TC,
-    F::TF,
-    constraints::C,
-    method::M,
-    population,
-    opts::Options = Options(; default_options(method)...),
-) where {TC,TF,M<:Optimizer,C<:AbstractConstraints}
-    @assert length(population) > 0 "Population is empty"
-    obj = Objective(f, first(population), F)
-    optimize(obj, constraints, method, population, opts)
-end
-
-function optimize(
-    objective::D,
-    constraints::C,
-    method::M,
-    population::AbstractArray,
+    objective,
+    method;
+    constraints = nothing,
+    population = nothing,
     options::Options = Options(; default_options(method)...),
-    state = initial_state(method, objective, population, options),
-)::OptimizationResult where {D<:AbstractObjective,C<:AbstractConstraints,M<:Optimizer}
+    state = nothing,
+)::OptimizationResult
+
+    if constraints === nothing
+        constraints = NoConstraints()
+    end
+
+    if isa(objective, Function)
+        objective = Objective(objective, first(population))
+    end
+
+    if population === nothing
+        population = initial_population(method, objective)
+    end
+
+    if state === nothing
+        state = initial_state(method, objective, population, options)
+    end
 
     iteration = 0
     stopped = false
@@ -112,9 +30,10 @@ function optimize(
     start_time = stop_time = time()
 
     trace = []
-    if options.store_trace
-        push!(trace, copy(state))
-    end
+    # Ignore first state
+    # if options.store_trace
+    #     push!(trace, copy(state))
+    # end
 
     # 终止条件
     # 1. 收敛
@@ -146,6 +65,9 @@ function optimize(
 
         if (options.store_trace)
             push!(trace, copy(state))
+        end
+        if (options.state_callback !== nothing)
+            options.state_callback(state)
         end
 
         should_break && break

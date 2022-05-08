@@ -112,7 +112,7 @@ end
 Inverse fitness SUS. Best used in minimization to 0.
 """
 susinv(fitness::AbstractMatrix, N::Int; kwargs...) = sus(1.0 ./ fitness, N; kwargs...)
-susinv(pop::Population, N::Int; kwargs...) = sus(1.0 ./ objective(pop), N; kwargs...)
+susinv(pop::Population, N::Int; kwargs...) = sus(1.0 ./ objectives(pop), N; kwargs...)
 
 """
     truncation(fitness, N)
@@ -156,42 +156,42 @@ function tournament(groupSize::Int; select = argmin)
 end
 
 """
-    random(fitness, N)
+    random(population, N)
 
 Returns a collection on size `N` of uniformly selected individuals from the population.
 """
-random(fitness::Vector{<:Real}, N::Int; rng::AbstractRNG = Random.GLOBAL_RNG) =
-    rand(rng, 1:length(fitness), N)
+random(population, N::Int; rng::AbstractRNG = Random.GLOBAL_RNG) =
+    rand(rng, population, N)
 
 """
-    permutation(fitness, N)
+    permutation(population, N)
 
 Returns a permutation on size `N` of the individuals from the population.
 """
-function permutation(fitness::Vector{<:Real}, N::Int; rng::AbstractRNG = Random.GLOBAL_RNG)
-    λ = length(fitness)
+function permutation(population, N::Int; rng::AbstractRNG = Random.GLOBAL_RNG)
+    λ = length(population)
     @assert λ >= N "Cannot select more then $(λ) elements"
     return randperm(rng, λ)[1:N]
 end
 
 """
-    randomoffset(fitness, N)
+    randomoffset(population, N)
 
 Returns a cycle selection on size `N` from an arbitrary position.
 """
-function randomoffset(fitness::Vector{<:Real}, N::Int; rng::AbstractRNG = Random.GLOBAL_RNG)
-    λ = length(fitness)
+function randomoffset(population, N::Int; rng::AbstractRNG = Random.GLOBAL_RNG)
+    λ = length(population)
     @assert λ >= N "Cannot select more then $(λ) elements"
     rg = rand(rng, 1:λ)
     return [(i + rg) % λ + 1 for i = 1:N]
 end
 
 """
-    best(fitness, N)
+    best(population, N)
 
 Returns a collection of best individuals of size `N`.
 """
-best(fitness::Vector{<:Real}, N::Int; kwargs...) = fill(last(findmin(fitness)), N)
+best(population, N::Int; kwargs...) = fill(last(findmin(objectives(population))), N)
 
 
 # Utilities: selection

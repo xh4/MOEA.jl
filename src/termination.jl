@@ -112,6 +112,7 @@ function gd(A::AbstractMatrix, R::AbstractMatrix)
     end
     sum / na
 end
+gd(A::T, R::T) where {T<:Population} = gd(objectives(A), objectives(R))
 
 """
     igd(S,R)

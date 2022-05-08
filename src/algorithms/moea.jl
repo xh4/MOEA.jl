@@ -1,7 +1,7 @@
 """
     dominate(p, q)
 
-Returns `1` if `p` is dominated by `q`, `-1` if otherwise, and `0` if dominance cannot be determined.
+Returns `1` if `p` dominates `q`, `-1` if otherwise, and `0` if dominance cannot be determined.
 """
 function dominate(p::T, q::T) where {T<:AbstractArray}
     ret = 0
@@ -16,6 +16,7 @@ function dominate(p::T, q::T) where {T<:AbstractArray}
     end
     return ret
 end
+dominate(p::T, q::T) where {T<:Individual} = dominate(objectives(p), objectives(q))
 
 """
 dominations(P::AbstractVector)
@@ -33,7 +34,9 @@ function dominations(P::AbstractVector{T}) where {T<:AbstractArray}
     end
     D
 end
+dominations(P::Population) = dominations(objectives(P))
 
+# todo: 把 P 转置一下
 """
     nondominatedsort!(R, F)
 
@@ -83,41 +86,51 @@ function nondominatedsort!(R, P)
 
     F #, R #, Sₚ
 end
+function nondominatedsort!(P::Population)
+    R = fill(0, length(P))
+    nondominatedsort!(R, objectives(P)')
+    for i = 1:length(P)
+        P[i].rank = R[i]
+    end
+    P
+end
 
 """
-    crowding_distance!((C, F, fronts)
+    crowding_distance!((D, P)
 
-Calculate crowding distance for individuals and save the results into `C`
-given the fitness values `F` and collection of `fronts`.
+Calculate crowding distance for individuals and save the results into `D`
+given the fitness values `P` and collection of `F`.
 """
-function crowding_distance!(C::AbstractVector, F::AbstractMatrix{T}, fronts) where {T}
-    for f in fronts
-        cf = @view C[f]
-        if length(cf) <= 2
-            cf .= typemax(T)
-        else
-            # sort front by each objective value
-            SF = F[:, f]
-            d = size(SF, 1)
-            IX = zeros(Int, size(SF))
-            IIX = zeros(Int, size(SF))
-            for i = 1:d
-                irow, iirow, row = view(IX, i, :), view(IIX, i, :), view(SF, i, :)
-                sortperm!(irow, row)
-                sortperm!(iirow, irow)
-                permute!(row, irow)
-            end
-            nrm = SF[:, end] - SF[:, 1]
-            dst = (hcat(SF, fill(typemax(T), d)) - hcat(fill(typemin(T), d), SF)) ./ nrm
-            dst[isnan.(dst)] .= zero(T)
-            ss = sum(
-                mapslices(v -> diag(dst[:, v]) + diag(dst[:, v.+1]), IIX, dims = 1),
-                dims = 1,
-            )
-            cf .= vec(ss) / d
+function crowding_distance!(D::AbstractVector, I::AbstractMatrix) where {T}
+    N, _ = size(I)
+
+    for m = eachcol(I)
+        s = sortperm(m)
+        D[s[1]] = Inf
+        D[s[end]] = Inf
+
+        max, _ = findmax(m)
+        min, _ = findmin(m)
+
+        for i = 2:N-1
+            D[i] += (m[s[i+1]] - m[s[i-1]]) / (max - min)
         end
     end
-    C
+end
+function crowding_distance!(P::Population)
+    maxF, _ = findmax(map(rank, P))
+    F = [Vector{Int64}() for _ in 1:maxF]
+    for i = 1:length(P)
+        push!(F[rank(P[i])], i)
+    end
+    for f = F
+        C = fill(0.0, length(f))
+        crowding_distance!(C, objectives(P[f]))
+        for i = 1:length(f)
+            P[f][i].distance = C[i]
+        end
+    end
+    P
 end
 
 """
@@ -164,8 +177,8 @@ function compare(a::Vector, b::Vector)
 end
 
 
-function compare(a::Individual, b::Individual)
-    compare(objective(a), objective(b))
+function compare(a::AbstractIndividual, b::AbstractIndividual)
+    compare(objectives(a), objectives(b))
 end
 
 """

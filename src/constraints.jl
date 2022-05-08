@@ -102,6 +102,8 @@ BoxConstraints(lower::AbstractVector{T}, upper::AbstractVector{T}) where {T} =
     BoxConstraints(ConstraintBounds(lower, upper, [], []))
 BoxConstraints(lower::T, upper::T, size) where {T} =
     BoxConstraints(fill(lower, size), fill(upper, size))
+BoxConstraints(bounds::AbstractMatrix) =
+    BoxConstraints(bounds[1,:], bounds[2,:])
 apply!(c::BoxConstraints, x) = clip!(c.bounds, x)
 bounds(c::BoxConstraints) = c.bounds
 function show(io::IO, c::BoxConstraints)

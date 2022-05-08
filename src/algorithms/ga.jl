@@ -12,7 +12,7 @@ The constructor takes following keyword arguments:
 - `mutation`: [Mutation](@ref) function (default: `identity`)
 - `metrics` is a collection of convergence metrics.
 =#
-struct GA <: Optimizer
+struct GA <: AbstractOptimizer
     populationSize::Int
     crossoverRate::Float64
     mutationRate::Float64
@@ -54,15 +54,15 @@ mutable struct GAState <: AbstractOptimizerState
     iteration
     start_time
     stop_time
-
     metrics::ConvergenceMetrics # collection of convergence metrics
+
     eliteSize::Int
     population
     fittest
 end
 
-value(s::GAState) = objective(s.fittest)
-minimizer(s::GAState) = variable(s.fittest)
+value(s::GAState) = objectives(s.fittest)
+minimizer(s::GAState) = variables(s.fittest)
 copy(s::GAState) = GAState(s.iteration, s.start_time, s.stop_time, copy(s.metrics), s.eliteSize, copy(s.population), copy(s.fittest))
 
 """Initialization of GA algorithm state"""
@@ -78,7 +78,7 @@ end
 function update_state!(
     method::GA,
     state,
-    obj,
+    objective,
     constraints,
     options
 )
@@ -96,7 +96,7 @@ function update_state!(
     recombine!(offspring, parents, selected, method, offspringSize, rng = rng)
 
     # Elitism (copy population individuals before they pass to the offspring & get mutated)
-    idxs = sortperm(vec(objective(state.population)))
+    idxs = sortperm(vec(objectives(state.population)))
     for i = 1:state.eliteSize
         subs = offspringSize + i
         offspring[subs] = copy(parents[idxs[i]])
@@ -106,10 +106,10 @@ function update_state!(
     mutate!(offspring, method, constraints, rng = rng)
 
     # calculate fitness of the population
-    evaluate!(obj, offspring, constraints)
+    evaluate!(objective, offspring, constraints)
 
     # select the best individual
-    _, idx = findmin(objective(offspring))
+    _, idx = findmin(objectives(offspring))
     state.fittest = offspring[idx]
 
     # replace population
@@ -127,12 +127,13 @@ function recombine!(
     rng::AbstractRNG = Random.default_rng(),
 )
     mates = ((i, i == n ? i - 1 : i + 1) for i = 1:2:n)
-    for (i, j) in mates
-        p1, p2 = parents[selected[i]], parents[selected[j]]
+    for (k, j) in mates
+        pk, pj = selected[k], selected[j]
+        p1, p2 = parents[pk], parents[pj]
         if rand(rng) < method.crossoverRate
-            offspring[i], offspring[j] = method.crossover(p1, p2, rng = rng)
+            offspring[pk], offspring[pj] = method.crossover(p1, p2, rng = rng)
         else
-            offspring[i], offspring[j] = p1, p2
+            offspring[pk], offspring[pj] = p1, p2
         end
     end
 

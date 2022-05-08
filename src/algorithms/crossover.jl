@@ -8,7 +8,7 @@
 Returns the same parameter individuals `v1` and `v2` as an offspring pair.
 """
 identity(v1::T, v2::T; kwargs...) where {T<:AbstractVector} = (v1, v2)
-identity(v1::T, v2::T; kwargs...) where {T<:Individual} = (v1, v2)
+identity(v1::T, v2::T; kwargs...) where {T<:AbstractIndividual} = (v1, v2)
 
 # Binary crossovers
 # -----------------
@@ -32,8 +32,8 @@ function SPX(
     end
     return c1, c2
 end
-SPX(v1::T, v2::T; rng::AbstractRNG = Random.default_rng()) where {T<:Individual} = 
-    map(Individual, SPX(variable(v1), variable(v2), rng=rng))
+SPX(v1::T, v2::T; rng::AbstractRNG = Random.default_rng()) where {T<:AbstractIndividual} = 
+    map(T, SPX(variables(v1), variables(v2), rng=rng))
 
 """
     TPX(v1, v2)
@@ -55,8 +55,8 @@ function TPX(
     end
     return c1, c2
 end
-TPX(v1::T, v2::T; rng::AbstractRNG = Random.default_rng()) where {T<:Individual} = 
-    map(Individual, TPX(variable(v1), variable(v2), rng=rng))
+TPX(v1::T, v2::T; rng::AbstractRNG = Random.default_rng()) where {T<:AbstractIndividual} = 
+    map(T, TPX(variables(v1), variables(v2), rng=rng))
 
 """
     SHFX(v1, v2)
@@ -80,8 +80,8 @@ function SHFX(
     end
     return c1, c2
 end
-SHFX(v1::T, v2::T; rng::AbstractRNG = Random.default_rng()) where {T<:Individual} = 
-    map(Individual, SHFX(variable(v1), variable(v2), rng=rng))
+SHFX(v1::T, v2::T; rng::AbstractRNG = Random.default_rng()) where {T<:AbstractIndividual} = 
+    map(T, SHFX(variables(v1), variables(v2), rng=rng))
 
 """
     UX(v1, v2)
@@ -100,8 +100,8 @@ function UX(v1::T, v2::T; rng::AbstractRNG = Random.default_rng()) where {T<:Abs
     end
     return c1, c2
 end
-UX(v1::T, v2::T; rng::AbstractRNG = Random.default_rng()) where {T<:Individual} = 
-    map(Individual, UX(variable(v1), variable(v2), rng=rng))
+UX(v1::T, v2::T; rng::AbstractRNG = Random.default_rng()) where {T<:AbstractIndividual} = 
+    map(T, UX(variables(v1), variables(v2), rng=rng))
 
 """
     BINX(Cr::Real=0.5)
@@ -127,10 +127,16 @@ function BINX(Cr::Real = 0.5)
         end
         return c1, c2
     end
+    function binxvr(
+        v1::T,
+        v2::T;
+        rng::AbstractRNG = Random.default_rng(),
+    ) where {T<:AbstractIndividual}
+        c1, c2 = binxvr(variables(v1), variables(v2), rng=rng)
+        return T(c1), T(c2)
+    end
     return binxvr
 end
-BINX(v1::T, v2::T; rng::AbstractRNG = Random.default_rng()) where {T<:Individual} = 
-    map(Individual, BINX(variable(v1), variable(v2), rng=rng))
 
 """
     EXPX(Cr::Real=0.5)
@@ -165,8 +171,8 @@ function EXPX(Cr::Real = 0.5)
         v1::T,
         v2::T;
         rng::AbstractRNG = Random.default_rng(),
-    ) where {T<:Individual}
-        map(Individual, expxvr(variable(v1), variable(v2), rng=rng))
+    ) where {T<:AbstractIndividual}
+        map(T, expxvr(variables(v1), variables(v2), rng=rng))
     end
     return expxvr
 end
@@ -197,8 +203,8 @@ function BSX(k::Int)
         v1::T,
         v2::T;
         rng::AbstractRNG = Random.default_rng(),
-    ) where {T<:Individual}
-        map(Individual, BSX(variable(v1), variable(v2), rng=rng))
+    ) where {T<:AbstractIndividual}
+        map(T, BSX(variables(v1), variables(v2), rng=rng))
     end
     return BSX
 end
@@ -223,8 +229,8 @@ function DC(v1::T, v2::T; rng::AbstractRNG = Random.default_rng()) where {T<:Abs
     end
     return c1, c2
 end
-DC(v1::T, v2::T; rng::AbstractRNG = Random.default_rng()) where {T<:Individual} = 
-    map(Individual, DC(variable(v1), variable(v2), rng=rng))
+DC(v1::T, v2::T; rng::AbstractRNG = Random.default_rng()) where {T<:AbstractIndividual} = 
+    map(T, DC(variables(v1), variables(v2), rng=rng))
 
 """
     WAX(w::Vector{<:Real})(v1, v2)
@@ -244,8 +250,8 @@ function WAX(w::Vector{<:Real})
         v1::T,
         v2::T;
         rng::AbstractRNG = Random.default_rng(),
-    ) where {T<:Individual}
-        map(Individual, wavexvr(variable(v1), variable(v2), rng=rng))
+    ) where {T<:AbstractIndividual}
+        map(T, wavexvr(variables(v1), variables(v2), rng=rng))
     end
     return wavexvr
 end
@@ -259,8 +265,8 @@ function AX(v1::T, v2::T; rng::AbstractRNG = Random.default_rng()) where {T<:Abs
     c1 = (v1 + v2) ./ 2
     return c1, copy(c1)
 end
-AX(v1::T, v2::T; rng::AbstractRNG = Random.default_rng()) where {T<:Individual} = 
-    map(Individual, AX(variable(v1), variable(v2), rng=rng))
+AX(v1::T, v2::T; rng::AbstractRNG = Random.default_rng()) where {T<:AbstractIndividual} = 
+    map(T, AX(variables(v1), variables(v2), rng=rng))
 
 """
     IC(d::Real=0.0)
@@ -290,8 +296,8 @@ function IC(d::Real = 0.0)
         v1::T,
         v2::T;
         rng::AbstractRNG = Random.default_rng(),
-    ) where {T<:Individual}
-        map(Individual, intermxvr(variable(v1), variable(v2), rng=rng))
+    ) where {T<:AbstractIndividual}
+        map(T, intermxvr(variables(v1), variables(v2), rng=rng))
     end
     return intermxvr
 end
@@ -322,8 +328,8 @@ function LC(d::Real = 0.0)
         v1::T,
         v2::T;
         rng::AbstractRNG = Random.default_rng(),
-    ) where {T<:Individual}
-        map(Individual, linexvr(variable(v1), variable(v2), rng=rng))
+    ) where {T<:AbstractIndividual}
+        map(T, linexvr(variables(v1), variables(v2), rng=rng))
     end
     return linexvr
 end
@@ -343,8 +349,8 @@ function HX(v1::T, v2::T; rng::AbstractRNG = Random.default_rng()) where {T<:Abs
     c2 = v2 .+ rand(rng) * (v2 .- v1)
     return c1, c2
 end
-HX(v1::T, v2::T; rng::AbstractRNG = Random.default_rng()) where {T<:Individual} = 
-    map(Individual, HX(variable(v1), variable(v2), rng=rng))
+HX(v1::T, v2::T; rng::AbstractRNG = Random.default_rng()) where {T<:AbstractIndividual} = 
+    map(T, HX(variables(v1), variables(v2), rng=rng))
 
 """
     LX(μ::Real = 0.0, b::Real = 0.2)
@@ -368,8 +374,8 @@ function LX(μ::Real = 0.0, b::Real = 0.2) # location μ, scale b > 0
         v1::T,
         v2::T;
         rng::AbstractRNG = Random.default_rng(),
-    ) where {T<:Individual}
-        map(Individual, lxxvr(variable(v1), variable(v2), rng=rng))
+    ) where {T<:AbstractIndividual}
+        map(T, lxxvr(variables(v1), variables(v2), rng=rng))
     end
     return lxxvr
 end
@@ -399,8 +405,8 @@ function MILX(μ::Real = 0.0, b_real::Real = 0.15, b_int::Real = 0.35) # locatio
         v1::T,
         v2::T;
         rng::AbstractRNG = Random.default_rng(),
-    ) where {T<:Individual}
-        map(Individual, milxxvr(variable(v1), variable(v2), rng=rng))
+    ) where {T<:AbstractIndividual}
+        map(T, milxxvr(variables(v1), variables(v2), rng=rng))
     end
     return milxxvr
 end
@@ -438,8 +444,8 @@ function SBX(pm::Real = 0.5, η::Integer = 2)
         v1::T,
         v2::T;
         rng::AbstractRNG = Random.default_rng(),
-    ) where {T<:Individual}
-        map(Individual, sbxv(variable(v1), variable(v2), rng=rng))
+    ) where {T<:AbstractIndividual}
+        map(T, sbxv(variables(v1), variables(v2), rng=rng))
     end
     return sbxv
 end
@@ -499,8 +505,8 @@ function PMX(
     end
     return c1, c2
 end
-PMX(v1::T, v2::T; rng::AbstractRNG = Random.default_rng()) where {T<:Individual} = 
-    map(Individual, PMX(variable(v1), variable(v2), rng=rng))
+PMX(v1::T, v2::T; rng::AbstractRNG = Random.default_rng()) where {T<:AbstractIndividual} = 
+    map(T, PMX(variables(v1), variables(v2), rng=rng))
 
 """
     OX1(v1, v2)
@@ -536,8 +542,8 @@ function OX1(
     end
     return c1, c2
 end
-OX1(v1::T, v2::T; rng::AbstractRNG = Random.default_rng()) where {T<:Individual} = 
-    map(Individual, OX1(variable(v1), variable(v2), rng=rng))
+OX1(v1::T, v2::T; rng::AbstractRNG = Random.default_rng()) where {T<:AbstractIndividual} = 
+    map(T, OX1(variables(v1), variables(v2), rng=rng))
 
 """
     CX(v1, v2)
@@ -581,8 +587,8 @@ function CX(v1::T, v2::T; kwargs...) where {T<:AbstractVector}
     end
     return c1, c2
 end
-CX(v1::T, v2::T; kwargs...) where {T<:Individual} = 
-    map(Individual, CX(variable(v1), variable(v2); kwargs...))
+CX(v1::T, v2::T; kwargs...) where {T<:AbstractIndividual} = 
+    map(T, CX(variables(v1), variables(v2); kwargs...))
 
 """
     OX2(v1, v2)
@@ -622,8 +628,8 @@ function OX2(
     end
     return c1, c2
 end
-OX2(v1::T, v2::T; rng::AbstractRNG = Random.default_rng()) where {T<:Individual} = 
-    map(Individual, OX2(variable(v1), variable(v2), rng=rng))
+OX2(v1::T, v2::T; rng::AbstractRNG = Random.default_rng()) where {T<:AbstractIndividual} = 
+    map(T, OX2(variables(v1), variables(v2), rng=rng))
 
 """
     POS(v1, v2)
@@ -662,8 +668,8 @@ function POS(
     end
     return c1, c2
 end
-POX(v1::T, v2::T; rng::AbstractRNG = Random.default_rng()) where {T<:Individual} = 
-    map(Individual, POX(variable(v1), variable(v2), rng=rng))
+POX(v1::T, v2::T; rng::AbstractRNG = Random.default_rng()) where {T<:AbstractIndividual} = 
+    map(T, POX(variables(v1), variables(v2), rng=rng))
 
 """
     SSX(v1, v2)
@@ -687,5 +693,5 @@ function SSX(
     end
     return c1, c2
 end
-SSX(v1::T, v2::T; rng::AbstractRNG = Random.default_rng()) where {T<:Individual} = 
-    map(Individual, SSX(variable(v1), variable(v2), rng=rng))
+SSX(v1::T, v2::T; rng::AbstractRNG = Random.default_rng()) where {T<:AbstractIndividual} = 
+    map(T, SSX(variables(v1), variables(v2), rng=rng))

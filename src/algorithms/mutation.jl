@@ -22,8 +22,8 @@ function flip(
     recombinant[pos] = !recombinant[pos]
     return recombinant
 end
-flip(recombinant::Individual; rng::AbstractRNG = Random.default_rng(),) = 
-    Individual(flip(variable(recombinant), rng=rng))
+flip(recombinant::T; rng::AbstractRNG = Random.default_rng(),) where {T<:AbstractIndividual} = 
+    T(flip(variables(recombinant), rng=rng))
 
 """
     bitinversion(recombinant)
@@ -32,8 +32,8 @@ Returns an in-place mutated binary `recombinant` with its bits inverted.
 """
 bitinversion(recombinant::T) where {T<:AbstractVector{Bool}} =
     map!(!, recombinant, recombinant)
-bitinversion(recombinant::Individual) = 
-    Individual(bitinversion(variable(recombinant)))
+bitinversion(recombinant::T) where {T<:AbstractIndividual} = 
+    T(bitinversion(variables(recombinant)))
 
 # Real-valued mutations
 # ---------------------
@@ -61,8 +61,8 @@ function uniform(r::Real = 1.0)
     function mutation(
         recombinant::T;
         rng::AbstractRNG = Random.default_rng(),
-    ) where {T<:Individual}
-        Individual(mutation(variable(recombinant), rng=rng))
+    ) where {T<:AbstractIndividual}
+        T(mutation(variables(recombinant), rng=rng))
     end
     return mutation
 end
@@ -90,8 +90,8 @@ function gaussian(σ::Real = 1.0)
     function mutation(
         recombinant::T;
         rng::AbstractRNG = Random.default_rng(),
-    ) where {T<:Individual}
-        Individual(mutation(variable(recombinant), rng=rng))
+    ) where {T<:AbstractIndividual}
+        T(mutation(variables(recombinant), rng=rng))
     end
     return mutation
 end
@@ -125,8 +125,8 @@ function BGA(valrange::Vector, m::Int = 20)
     function mutation(
         recombinant::T;
         rng::AbstractRNG = Random.default_rng(),
-    ) where {T<:Individual}
-        Individual(mutation(variable(recombinant), rng=rng))
+    ) where {T<:AbstractIndividual}
+        T(mutation(variables(recombinant), rng=rng))
     end
     return mutation
 end
@@ -202,8 +202,8 @@ function mipmmutation(
     function mutation(
         recombinant::T;
         rng::AbstractRNG = Random.default_rng(),
-    ) where {T<:Individual}
-        Individual(mutation(variable(recombinant), rng=rng))
+    ) where {T<:AbstractIndividual}
+        T(mutation(variables(recombinant), rng=rng))
     end
     return mutation
 end
@@ -235,8 +235,8 @@ function PLM(Δ::Union{Real,Vector} = 1.0; η = 2, pm::Real = NaN) # index of di
     function mutation(
         recombinant::T;
         rng::AbstractRNG = Random.default_rng(),
-    ) where {T<:Individual}
-        Individual(mutation(variable(recombinant), rng=rng))
+    ) where {T<:AbstractIndividual}
+        T(mutation(variables(recombinant), rng=rng))
     end
     return mutation
 end
@@ -268,8 +268,8 @@ function inversion(
     end
     return recombinant
 end
-inversion(recombinant::T; rng::AbstractRNG = Random.default_rng(),) where {T<:Individual} = 
-    Individual(inversion(variable(recombinant), rng = rng))
+inversion(recombinant::T; rng::AbstractRNG = Random.default_rng(),) where {T<:AbstractIndividual} = 
+    T(inversion(variables(recombinant), rng = rng))
 
 """
     insertion(recombinant)
@@ -286,8 +286,8 @@ function insertion(
     deleteat!(recombinant, from)
     return insert!(recombinant, to, val)
 end
-insertion(recombinant::T; rng::AbstractRNG = Random.default_rng(),) where {T<:Individual} = 
-    Individual(insertion(variable(recombinant), rng = rng))
+insertion(recombinant::T; rng::AbstractRNG = Random.default_rng(),) where {T<:AbstractIndividual} = 
+    T(insertion(variables(recombinant), rng = rng))
 
 """
     swap2(recombinant)
@@ -303,8 +303,8 @@ function swap2(
     swap!(recombinant, from, to)
     return recombinant
 end
-swap2(recombinant::T; rng::AbstractRNG = Random.default_rng(),) where {T<:Individual} = 
-    Individual(swap2(variable(recombinant), rng = rng))
+swap2(recombinant::T; rng::AbstractRNG = Random.default_rng(),) where {T<:AbstractIndividual} = 
+    T(swap2(variables(recombinant), rng = rng))
 
 """
     scramble(recombinant)
@@ -327,8 +327,8 @@ function scramble(
     end
     return recombinant
 end
-scramble(recombinant::T; rng::AbstractRNG = Random.default_rng(),) where {T<:Individual} = 
-    Individual(scramble(variable(recombinant), rng = rng))
+scramble(recombinant::T; rng::AbstractRNG = Random.default_rng(),) where {T<:AbstractIndividual} = 
+    T(scramble(variables(recombinant), rng = rng))
 
 """
     shifting(recombinant)
@@ -356,8 +356,8 @@ function shifting(
     end
     return recombinant
 end
-shifting(recombinant::T; rng::AbstractRNG = Random.default_rng(),) where {T<:Individual} = 
-    Individual(shifting(variable(recombinant), rng = rng))
+shifting(recombinant::T; rng::AbstractRNG = Random.default_rng(),) where {T<:AbstractIndividual} = 
+    T(shifting(variables(recombinant), rng = rng))
 
 """
     replace(pool,[minchange=1])(recombinant)
@@ -391,8 +391,8 @@ function replace(pool::Vector{P}; minchange = 1) where {P}
     function rplc(
         recombinant::T;
         rng::AbstractRNG = Random.default_rng(),
-    ) where {T<:Individual}
-        Individual(rplc(variable(recombinant), rng = rng))
+    ) where {T<:AbstractIndividual}
+        T(rplc(variables(recombinant), rng = rng))
     end
     return rplc
 end
@@ -409,17 +409,15 @@ Returns an in-place differently mutated individual ``x^\\prime`` from `recombina
 - ``x^\\prime = x + \\sum_{i=1}^{n/2} F (\\xi_{2i-1} - \\xi_{2i})``
 
 """
-function differentiation(
-    recombinant::T,
-    mutators::AbstractVector{T};
+function differentiation!(
+    recombinant::AbstractVector,
+    mutators::AbstractMatrix;
     F::Real = 1.0,
-) where {T<:AbstractVector}
-    m = length(mutators)
-    @assert m % 2 == 0 "Must be even number of target mutators"
-    for i = 1:2:m
-        recombinant .+= F .* (mutators[i] .- mutators[i+1])
-    end
+)
+    r, c = size(mutators)
+    @assert r == 2 "mutators must be 2"
+    recombinant .+= F .* (mutators[1,:] .- mutators[2,:])
     return recombinant
 end
-differentiation(recombinant::T, mutators::AbstractVector{T}; F::Real = 1.0,) where {T<:Individual} = 
-    Individual(differentiation(variable(recombinant), map(variable, mutators), F=F))
+differentiation!(recombinant::T, mutators::Vector{T}; F::Real = 1.0,) where {T<:AbstractIndividual} =
+    T(differentiation!(variables(recombinant), variables(mutators), F=F))
