@@ -25,9 +25,9 @@ Multi-Objective Evolutionary Algorithms in Julia
 
 ```julia
 ga = GA(populationSize=100,
-		selection=susinv,
-		mutation=BGA(ones(2)),
-		crossover=DC)
+	selection=susinv,
+	mutation=BGA(ones(2)),
+	crossover=DC)
 
 result = optimize(sphere,
                   ga,
