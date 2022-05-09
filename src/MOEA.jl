@@ -162,7 +162,12 @@ include("problems/ackley.jl")
 include("utilities.jl")
 
 include("gui/utils.jl")
+include("gui/image.jl")
+include("gui/parameter.jl")
+include("gui/problem.jl")
+include("gui/algorithm.jl")
 include("gui/playground.jl")
+include("gui/experiment.jl")
 include("gui/gui.jl")
 
 end

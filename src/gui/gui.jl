@@ -90,13 +90,15 @@ end
 
 function gui()
     show_playground_window = true
+    show_experiment_window = true
     render_playground_window = playground_window()
+    render_experiment_window = experiment_window()
     if gui_task !== nothing
         # ex = InterruptException()
         # Base.throwto(gui_task, ex)
     end
     Plots.theme(:dark)
-    global gui_task = Threads.@spawn Threads.@sync render(width = 800, height = 1200, title = "MOEA") do
+    global gui_task = Threads.@spawn Threads.@sync render(width = 600, height = 800, title = "MOEA") do
         CImGui.Begin("Start")
         if CImGui.Button("Playground")
             show_playground_window = !show_playground_window
@@ -105,7 +107,12 @@ function gui()
             render_playground_window()
         end
         CImGui.SameLine()
-        CImGui.Button("Experiment") && @show "triggered"
+        if CImGui.Button("Experiment")
+            show_experiment_window = !show_experiment_window
+        end
+        if show_experiment_window
+            render_experiment_window()
+        end
         CImGui.End()
     end
 end
