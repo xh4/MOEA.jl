@@ -10,20 +10,34 @@ function benchmark(problem, algorithm; runs = 30)
     igds = []
     hvs = []
     times = []
-    progress = Progress(runs, dt=0.5, barglyphs=BarGlyphs("[=> ]"), barlen=50, color=:yellow)
+    progress = Progress(runs*problem.maxFE, dt=0.5, barglyphs=BarGlyphs("[=> ]"), barlen=50, color=:yellow)
+    println(runs)
     Threads.@threads for i in 1:runs
         time_start = time()
-        result = optimize(problem, algorithm)
+        prev_state = nothing
+        state_callback = function (state)
+            if prev_state === nothing
+                next!(progress, step=state.fcalls)
+            else
+                next!(progress, step=state.fcalls-prev_state.fcalls)
+            end
+            prev_state = state
+        end
+        result = optimize(problem, algorithm, options = Options(
+            state_callback = state_callback
+        ))
+        println("finish")
         time_stop = time()
         duration = time_stop - time_start
         push!(times, duration)
         state = result.trace[end]
         igd = IGD(pfront(state), problem.truepf)
+        println("finish igd")
         push!(igds, igd)
         hv = HV(pfront(state), problem.truepf)
+        println("finish hv")
         push!(hvs, hv)
         save_run(problem, algorithm, igd, hv)
-        next!(progress)
     end
     @assert length(igds) == runs
     @assert length(hvs) == runs

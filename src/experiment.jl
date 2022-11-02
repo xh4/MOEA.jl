@@ -8,7 +8,7 @@ function experiment(problems, algorithms; runs = 30)
     result = fill(NaN, length(indicators), length(problems), length(algorithms), runs)
 
     progress = Progress(
-        runs * length(problems) * length(algorithms),
+        reduce((n, p) -> n + runs * p.maxFE * length(algorithms), problems, init=0),
         dt = 0.5,
         barglyphs = BarGlyphs("[=> ]"),
         barlen = 50,
@@ -48,10 +48,14 @@ function experiment(problems, algorithms; runs = 30)
                     continue
                 end
 
+                prev_state = nothing
                 state_callback = function (state)
                     try
-                        # generation = state.iteration
-                        nothing
+                        if prev_state === nothing
+                            next!(progress, step=state.fcalls)
+                        else
+                            next!(progress, step=state.fcalls-prev_state.fcalls)
+                        end
 
                     catch e
                         @error "Error in state callback!" exception = e
@@ -69,7 +73,6 @@ function experiment(problems, algorithms; runs = 30)
                     save_run(problem, algorithm, igd, hv)
                 end
 
-                # TODO: initial population
                 population_size = algorithm.N
                 try
                     # println("Optimize $(problem) with $(algorithm) run $(run)")
@@ -85,8 +88,6 @@ function experiment(problems, algorithms; runs = 30)
                     @error "Error in state callback!" exception = e
                     Base.show_backtrace(stderr, catch_backtrace())
                 end
-
-                next!(progress)
             end
         end
         push!(tasks, task)

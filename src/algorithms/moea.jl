@@ -16,7 +16,7 @@ function dominate(p::T, q::T) where {T<:AbstractArray}
     end
     return ret
 end
-dominate(p::T, q::T) where {T<:AbstractIndividual} = dominate(objectives(p), objectives(q)) 
+dominate(p::T, q::T) where {T<:AbstractIndividual} = dominate(objectives(p), objectives(q))
 
 """
 dominations(P::AbstractVector)
@@ -127,7 +127,7 @@ end
 Calculate crowding distance for individuals and save the results into `D`
 given the fitness values `P` and collection of `F`.
 """
-function crowding_distance!(D::AbstractVector, I::AbstractMatrix) where {T}
+function crowding_distance!(D::AbstractVector, I::AbstractMatrix)
     N, _ = size(I)
 
     for m = eachcol(I)
@@ -192,14 +192,14 @@ function compare(a::Vector, b::Vector)
         return 1; #  a dominates b
     end
 
-    for j = i+1:k #(j = i+1; j < k; ++j) 
+    for j = i+1:k #(j = i+1; j < k; ++j)
         if (a[j] < b[j])
             return 3 #; // a and b are incomparable
         end
     end
 
     return 2 # b dominates a
-    
+
 end
 
 
@@ -221,7 +221,7 @@ function get_non_dominated_solutions_perm(population)
         while j <= length(ids)
             jj = ids[j]
             relation = compare(population[i], population[jj])
- 
+
             if relation == 2 # j dominates i
                 break
             elseif relation == 1 # i dominates j
@@ -235,7 +235,7 @@ function get_non_dominated_solutions_perm(population)
         if j > length(ids)
             push!(ids, i)
         end
-        
+
     end
 
     return ids
@@ -255,7 +255,7 @@ end
 Computes the nadir point from a provided array of `Vector`s or a population or row vectors
 in a `Matrix`.
 """
-function nadir(points::Array{Vector{T}})  where T <: Real 
+function nadir(points::Array{Vector{T}})  where T <: Real
     (isempty(points) || isempty(points[1])) && return zeros(0)
     nadir = points[1]
 
@@ -285,10 +285,10 @@ nadir(A::Matrix) = nadir([A[i,:]  for i in 1:size(A,1)])
 Computes the ideal point from a provided array of `Vector`s or a population or row vectors
 in a `Matrix`.
 """
-function ideal(points::Array{Vector{T}}) where T <: Real 
+function ideal(points::Array{Vector{T}}) where T <: Real
 
     (isempty(points) || isempty(points[1])) && return zeros(0)
-    
+
     ideal = points[1]
 
     for point in points
@@ -307,7 +307,7 @@ function ideal(population)
         @warn "Ideal point was computed using infeasible solutions. Use `ideal(fvals(population))` to ignore feasibility."
         return ideal(objectives.(population))
     end
-    
+
 
     ideal(objectives.(population[mask]))
 end

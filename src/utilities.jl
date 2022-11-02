@@ -14,7 +14,7 @@ function update!(
     show_trace::Bool,
     show_every::Int = 1,
     callback = nothing,
-) where {S<:AbstractOptimizerState,T,O}
+) where {S<:AbstractOptimizerState}
     os = OptimizationTraceRecord(
         iteration,
         copy(population),

@@ -34,7 +34,7 @@ function optimize(
         state.stop_time = time()
 
         if (options.store_trace)
-            # push!(trace, copy(state))
+            push!(trace, copy(state))
         end
         if (options.state_callback !== nothing)
             options.state_callback(state)
