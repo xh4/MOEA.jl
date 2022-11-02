@@ -126,13 +126,12 @@ function truncation(fitness::Vector{<:Real}, N::Int; kwargs...)
     return idx[1:N]
 end
 
-"""Tournament selection"""
 function tournament(groupSize::Int; select = argmin)
     @assert groupSize > 0 "Group size must be positive"
     function tournamentN(
         fitness::AbstractVecOrMat{<:Real},
         N::Int;
-        rng::AbstractRNG = Random.GLOBAL_RNG,
+        rng::AbstractRNG = Random.default_rng(),
     )
         selection = fill(0, N)
         sFitness = size(fitness)

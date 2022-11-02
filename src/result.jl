@@ -66,74 +66,19 @@ relchange(r::AbstractOptimizationResult) =
 
 
 mutable struct OptimizationResult <: AbstractOptimizationResult
-    method
-    minimizer
-    minimum
-    iterations::Int
-    iteration_converged::Bool
-    converged::Bool
-    metrics::ConvergenceMetrics
-    f_calls::Int
+    problem
+    algorithm
+    state
+    iterations
     trace
-    time_limit::Float64
-    time_run::Float64
-    is_moo::Bool
+    time::Float64
 end
 
-converged(r::OptimizationResult) = r.converged
-time_limit(r::OptimizationResult) = r.time_limit
-time_run(r::OptimizationResult) = r.time_run
-is_moo(r::OptimizationResult) = r.is_moo
-
 function show(io::IO, r::OptimizationResult)
-    failure_string = "failure"
-    if iteration_limit_reached(r)
-        failure_string *= " (reached maximum number of iterations)"
-    end
-    if time_run(r) > time_limit(r)
-        failure_string *= " (exceeded time limit of $(time_limit(r)))"
-    end
-    print(io, "\n")
-    print(io, " * Status: ", converged(r) ? "success" : failure_string, "\n\n")
-    print(io, " * Candidate solution\n")
-    mzr = minimizer(r)
-    if is_moo(r)
-        pfsize = size(mzr)[1]
-        pl = pfsize > 1 ? "s" : ""
-        print(io, "    Pareto front: $(pfsize) element$pl\n")
-    elseif mzr isa AbstractVector
-        nx = length(mzr)
-        str_x_elements = ["$_x" for _x in Iterators.take(mzr, min(nx, 3))]
-        if nx >= 4
-            push!(str_x_elements, " ...")
-        end
-        print(io, "    Minimizer:  [", join(str_x_elements, ", "), "]\n")
-    else
-        print(io, "    Minimizer:  $mzr\n")
-    end
-    !is_moo(r) && print(io, "    Minimum:    $(minimum(r))\n")
-    print(io, "    Iterations:", rpad(" ", is_moo(r) ? 3 : 0), "$(iterations(r))\n")
-    print(io, "\n")
-    print(io, " * Found with\n")
-    print(io, "    Algorithm: $(summary(r))\n")
-    print(io, "\n")
-    if length(r.metrics) > 0
-        print(io, " * Convergence measures\n")
-        maxdsclen = maximum(length(description(cm)) for cm in r.metrics)
-        rpd = " "^4
-        for cm in r.metrics
-            sgn = converged(cm) ? "≤" : "≰"
-            dsc = description(cm)
-            lpd = " "^(maxdsclen + 1 - length(dsc))
-            print(io, "$rpd$dsc$lpd= $(diff(cm)) $sgn $(tolerance(cm))\n")
-        end
-        print(io, "\n")
-    end
     print(io, " * Work counters\n")
-    tr = round(time_run(r); digits = 4)
-    tl = isnan(time_limit(r)) ? Inf : round(time_limit(r); digits = 4)
-    print(io, "    Seconds run:   $tr (vs limit $tl)\n")
-    print(io, "    Iterations:    $(iterations(r))\n")
-    print(io, "    f(x) calls:    $(f_calls(r))\n")
+    tr = round(r.time; digits = 4)
+    print(io, "    Seconds run:   $tr\n")
+    print(io, "    Iterations:    $(r.state.iteration)\n")
+    print(io, "    f(x) calls:    $(r.state.fcalls)\n")
     return
 end

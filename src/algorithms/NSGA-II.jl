@@ -1,65 +1,37 @@
-#=
-Non-dominated Sorting Genetic Algorithm (NSGA-II) for Multi-objective Optimization
-
-The constructor takes following keyword arguments:
-
-- `populationSize`: The size of the population
-- `crossoverRate`: The fraction of the population at the next generation, that is created by the crossover function
-- `mutationRate`: Probability of chromosome to be mutated
-- `selection`: [Selection](@ref) function (default: `tournament`)
-- `crossover`: [Crossover](@ref) function (default: `SBX`)
-- `mutation`: [Mutation](@ref) function (default: `PLM`)
-- `metrics` is a collection of convergence metrics.
-=#
-Base.@kwdef struct NSGAII <: AbstractOptimizer
-    populationSize::Int = 50
-    crossoverRate::Float64 = 0.9
-    mutationRate::Float64 = 0.2
-    selection = tournament(2, select = twowaycomp)
-    crossover = SBX()
-    mutation = PLM()
-    metrics::ConvergenceMetrics = ConvergenceMetric[GD(), GD(true)]
+Base.@kwdef struct NSGAII <: AbstractAlgorithm
+    N::Int = 100
 end
-
-population_size(method::NSGAII) = method.populationSize
-default_options(method::NSGAII) = (iterations = 1000,)
-summary(m::NSGAII) =
-    "NSGA-II[P=$(m.populationSize),x=$(m.crossoverRate),μ=$(m.mutationRate)]"
-show(io::IO, m::NSGAII) = print(io, summary(m))
 
 mutable struct NSGAIIIndividual <: AbstractIndividual
     variables::AbstractVector
     objectives::Union{AbstractVector, Number, Nothing}
-    constraints::Union{AbstractVector, Nothing}
     rank
     distance
 
-    NSGAIIIndividual(var) = new(var, nothing, nothing)
-    NSGAIIIndividual(var, obj) = new(var, obj, nothing)
-    NSGAIIIndividual(var, obj, cst) = new(var, obj, cst)
-    NSGAIIIndividual(var, obj, cst, rank, distance) = new(var, obj, cst, rank, distance)
+    NSGAIIIndividual(var) = new(var, nothing)
+    NSGAIIIndividual(var, obj) = new(var, obj)
+    NSGAIIIndividual(var, obj, rank, distance) = new(var, obj, rank, distance)
 end
 variables(i::NSGAIIIndividual) = i.variables
 objectives(i::NSGAIIIndividual) = i.objectives
-constraints(i::NSGAIIIndividual) = i.constraints
 rank(i::NSGAIIIndividual) = i.rank
 distance(i::NSGAIIIndividual) = i.distance
-copy(i::NSGAIIIndividual) = NSGAIIIndividual(copy(i.variables), copy(i.objectives), copy(i.constraints), copy(i.rank), copy(i.distance))
-NSGAIIIndividual(i::Individual) = NSGAIIIndividual(copy(i.variables), copy(i.objectives), copy(i.constraints), nothing, nothing)
+copy(i::NSGAIIIndividual) = NSGAIIIndividual(copy(i.variables), copy(i.objectives), copy(i.rank), copy(i.distance))
+NSGAIIIndividual(i::Individual) = NSGAIIIndividual(copy(i.variables), copy(i.objectives), nothing, nothing)
 
 mutable struct NSGAIIState <: AbstractOptimizerState
     iteration
+    fcalls
     start_time
     stop_time
-    metrics::ConvergenceMetrics # collection of convergence metrics
 
     population                  # population
     pfront                      # individuals of the first Pareto front
 end
 pfront(s::NSGAIIState) = s.pfront
-value(s::NSGAIIState) = objectives(pfront(s))
-minimizer(s::NSGAIIState) = variables(pfront(s))
-copy(s::NSGAIIState) = NSGAIIState(s.iteration, s.start_time, s.stop_time, copy(s.metrics),
+value(s::NSGAIIState) = objectives(s.population)
+minimizer(s::NSGAIIState) = variables(s.population)
+copy(s::NSGAIIState) = NSGAIIState(s.iteration, s.fcalls, s.start_time, s.stop_time,
                                  copy(s.population),
                                  copy(s.pfront))
 
@@ -81,51 +53,39 @@ function calcF(P::Population)
     F
 end
 
-function initial_state(method::NSGAII, objective, population, options)
-    population = map(NSGAIIIndividual, population)
-    value!(objective, population)
+function initial_state(algorithm::NSGAII, problem, options)
+    population = [NSGAIIIndividual(rand(problem.D)) for i in 1:algorithm.N]
+    fcalls = evaluate!(problem, population)
     nondominatedsort!(population)
     crowding_distance!(population)
     pfront = filter(i -> rank(i) == 1, population)
-    return NSGAIIState(0, 0, 0, copy(method.metrics), population, pfront)
+    return NSGAIIState(0, fcalls, 0, 0, population, pfront)
 end
 
 function update_state!(
-    method::NSGAII,
+    algorithm::NSGAII,
     state,
-    objective,
-    constraints,
+    problem,
     options
 )
     parents = state.population
-
-    populationSize = method.populationSize
-    rng = options.rng
-
-    F = calcF(parents)
-    for f = F
-        d = sortperm(distances(parents[f]))
-        f = shuffle(f)
-    end
-    selected = collect(Iterators.flatten(F))
-
-    # select offspring
-    # selected = method.selection(hcat(ranks(parents), distances(parents))', populationSize; rng = rng)
-
     offspring = copy(parents)
 
+    # select parents for mating
+    selected = tournament(2, select = twowaycomp)(hcat(ranks(parents), -distances(parents))', algorithm.N; rng = options.rng)
+
     # perform mating
-    recombine!(offspring, parents, selected, method)
+    recombine!(offspring, parents, selected, SBX(), rng = options.rng)
 
     # perform mutation
-    mutate!(offspring, method, constraints, rng = rng)
+    mutate!(offspring, PLM(lower=lower(problem), upper=upper(problem)), rng = options.rng)
 
     # handle constraint
-    map(x -> apply!(constraints, variables(x)), offspring)
+    map(x -> apply!(problem.constraints, variables(x)), offspring)
 
-    evaluate!(objective, offspring, constraints)
+    evaluate!(state, problem, offspring)
 
-    population = vcat(parents, offspring)
+    population = [parents; offspring]
 
     # calculate ranks & crowding for population
     nondominatedsort!(population)
@@ -137,9 +97,9 @@ function update_state!(
     fitidx = Int[]
     F = calcF(population)
     for f in F
-        if length(fitidx) + length(f) > populationSize
-            idxs = sortperm(map(rank, population[f]))
-            append!(fitidx, idxs[1:(populationSize-length(fitidx))])
+        if length(fitidx) + length(f) > algorithm.N
+            idxs = f[reverse(sortperm(map(distance, population[f])))]
+            append!(fitidx, idxs[1:(algorithm.N-length(fitidx))])
             break
         else
             append!(fitidx, f)

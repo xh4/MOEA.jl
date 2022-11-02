@@ -4,7 +4,7 @@ import Random: seed!
 seed!(42)
 
 for tests in [
-    "DE.jl"
+    "DTLZ.jl"
 ]
     include(tests)
 end

@@ -412,42 +412,52 @@ function MILX(μ::Real = 0.0, b_real::Real = 0.15, b_int::Real = 0.35) # locatio
 end
 
 """
-    SBX(pm::Real = 0.5, η::Integer = 2)
+    SBX(pm::Real = 1.0, η::Integer = 20)
 
 Returns a Simulated Binary Crossover (SBX) recombination operation, see [Recombination Interface](@ref),
 with the mutation probability `pm` of the recombinant component, and is the crossover distribution index `η`[^6].
 """
-function SBX(pm::Real = 0.5, η::Integer = 2)
-    function sbxv(
+function SBX(; pm::Real = 0.5, η::Integer = 20)
+    function sbx(
+        v1::T,
+        v2::T;
+        rng::AbstractRNG = Random.default_rng(),
+    ) where {T<:Real}
+        u = rand(rng)
+        if u <= 0.5
+            β = (2u) ^ (1 / (η + 1))
+        else
+            β = (2 - 2u) ^ (-1 / (η + 1))
+        end
+        β = β * (-1) ^ round(rand(rng))
+        c1 = (v1 + v2) / 2 + β * (v1 - v2) / 2
+        c2 = (v1 + v2) / 2 - β * (v1 - v2) / 2
+        return c1, c2
+    end
+    function sbx(
         v1::T,
         v2::T;
         rng::AbstractRNG = Random.default_rng(),
     ) where {T<:AbstractVector}
-        n = length(v1)
-        u = rand(rng, n)
-        mask = u .<= 0.5
-        mask_neg = u .> 0.5
-        β = similar(v1)
-        β[mask] .= (2 * u[mask]) .^ (1 / (η + 1))
-        β[mask_neg] .= (2 * (1 .- u[mask_neg])) .^ (-1 / (η + 1))
-        μ = (v1 + v2) ./ 2
-        diff = v1 - v2
-        c = β .* diff ./ 2
-        mask_set = n == 1 ? [1] : rand(rng, n) .<= pm
-        c1 = copy(μ) # c2 = μ - c
-        c1[mask_set] .-= c[mask_set]
-        c2 = copy(μ) # c2 = μ + c
-        c2[mask_set] .+= c[mask_set]
-        return c1, c2
+        d = length(v1)
+        pm = isnan(pm) ? 1 / d : pm
+        c1 = copy(v1)
+        c2 = copy(v2)
+        for i = 1:d
+            if rand(rng) < pm
+                c1[i], c2[i] = sbx(v1[i], v2[i], rng=rng) 
+            end
+        end
+        c1, c2
     end
-    function sbxv(
+    function sbx(
         v1::T,
         v2::T;
         rng::AbstractRNG = Random.default_rng(),
     ) where {T<:AbstractIndividual}
-        map(T, sbxv(variables(v1), variables(v2), rng=rng))
+        map(T, sbx(variables(v1), variables(v2), rng=rng))
     end
-    return sbxv
+    return sbx
 end
 
 

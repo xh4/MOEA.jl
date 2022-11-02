@@ -236,3 +236,7 @@ end
 function state_igd(state, truepf)
     igd(pfront(state), truepf)
 end
+
+function print_matrix(m)
+    Base.print_matrix(Base.stdout, m)
+end

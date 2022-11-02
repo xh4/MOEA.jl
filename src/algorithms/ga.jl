@@ -103,10 +103,10 @@ function update_state!(
     end
 
     # perform mutation
-    mutate!(offspring, method, constraints, rng = rng)
+    mutate!(offspring, method, rng = rng)
 
     # calculate fitness of the population
-    evaluate!(objective, offspring, constraints)
+    evaluate!(state, objective, offspring)
 
     # select the best individual
     _, idx = findmin(objectives(offspring))
@@ -122,37 +122,48 @@ function recombine!(
     offspring,
     parents,
     selected,
-    method,
+    crossover,
     n = length(selected);
     rng::AbstractRNG = Random.default_rng(),
 )
+    crossover_rate = 1
     mates = ((i, i == n ? i - 1 : i + 1) for i = 1:2:n)
     for (k, j) in mates
         pk, pj = selected[k], selected[j]
         p1, p2 = parents[pk], parents[pj]
-        if rand(rng) < method.crossoverRate
-            offspring[pk], offspring[pj] = method.crossover(p1, p2, rng = rng)
+        if rand(rng) < crossover_rate
+            offspring[pk], offspring[pj] = crossover(p1, p2, rng = rng)
         else
             offspring[pk], offspring[pj] = p1, p2
         end
     end
-
 end
 
-function mutate!(population, method, constraints; rng::AbstractRNG = Random.default_rng())
+function mutate!(population, method; rng::AbstractRNG = Random.default_rng())
+    mutation_rate = 1
     n = length(population)
     for i = 1:n
-        if rand(rng) < method.mutationRate
-            method.mutation(population[i], rng = rng)
+        if rand(rng) < mutation_rate
+            population[i] = method(population[i], rng = rng)
         end
-
-        (constraints, population[i])
     end
 end
 
-function evaluate!(objective, population, constraints)
-    # calculate fitness of the population
-    value!(objective, population)
-    # apply penalty to fitness
-    # penalty!(fitness, constraints, population)
+function evaluate!(state, problem, population::Population)
+    state.fcalls += evaluate!(problem, population)
+end
+function evaluate!(problem, population::Population)
+    fcalls = 0
+    for i in population
+        i.objectives = problem.fn(variables(i))
+        fcalls += 1
+    end
+    fcalls
+end
+function evaluate!(state, problem, individual::AbstractIndividual)
+    state.fcalls += evaluate!(problem, individual)
+end
+function evaluate!(problem, individual::AbstractIndividual)
+    individual.objectives = problem.fn(variables(individual))
+    1
 end

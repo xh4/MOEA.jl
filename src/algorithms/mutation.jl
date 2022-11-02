@@ -209,39 +209,59 @@ function mipmmutation(
 end
 
 """
-    PLM(lower, upper, η = 2)
+    PLM(lower, upper, η = 20)
 
 Returns an in-place real valued mutation function that performs the Polynomial Mutation (PLM) scheme
 within `lower` and `upper` bounds, and a mutation distribution index `η`[^9].
 """
-function PLM(Δ::Union{Real,Vector} = 1.0; η = 2, pm::Real = NaN) # index of distribution p
-    function mutation(
-        recombinant::T;
+function PLM(; lower = 0.0, upper = 1.0, η = 20, pm::Real = NaN) # index of distribution p
+    function plm(
+        y::Real;
         rng::AbstractRNG = Random.default_rng(),
-    ) where {T<:AbstractVector}
+        lower = lower,
+        upper = upper
+    )
+        u = rand(rng)
+        y = min(max(y, lower), upper)
+        if u <= 0.5
+            δ = (y - lower) / (upper - lower)
+            δ_q = (2u + (1-2u)*(1-δ)^(η+1))^(1/(η+1)) -1
+        else
+            δ = (upper - y) / (upper - lower)
+            δ_q = 1 - (2(1-u)+2(u-0.5)*(1-δ)^(η+1)) ^ (1/(η+1))
+        end
+        c = y + δ_q*(upper-lower)
+        return c
+    end
+    function plm(
+        recombinant::AbstractVector;
+        rng::AbstractRNG = Random.default_rng(),
+        lower = lower,
+        upper = upper
+    )
         d = length(recombinant)
         pm = isnan(pm) ? 1 / d : pm
         mask = rand(rng, d) .< pm
-        u = rand(rng, d)
-        mask_p = u .<= 0.5
-        mask_n = u .> 0.5
-        δpw = 1 / (η + 1)
-        δ = similar(recombinant)
-        δ[mask_p] .= (2 * u[mask_p]) .^ δpw .- 1
-        δ[mask_n] .= 1 .- (2(1 .- u[mask_n])) .^ δpw
-        recombinant[mask] .+= (Δ.*δ)[mask]
-        return recombinant
+        if !isa(lower, Vector)
+            lower = fill(lower, d)
+        end
+        for i = 1:d
+            if mask[i] == 1
+                recombinant[i] = plm(recombinant[i], rng=rng, lower=lower[i], upper=upper[i])
+            end
+        end
+        recombinant
     end
-    function mutation(
+    function plm(
         recombinant::T;
         rng::AbstractRNG = Random.default_rng(),
+        lower = lower,
+        upper = upper
     ) where {T<:AbstractIndividual}
-        T(mutation(variables(recombinant), rng=rng))
+        T(plm(variables(recombinant), rng=rng, lower=lower, upper=upper))
     end
-    return mutation
+    return plm
 end
-PLM(lower::Vector, upper::Vector; η::Real = 2, pm::Real = NaN) =
-    PLM(upper - lower; η = η, pm = pm)
 
 
 # Combinatorial mutations (applicable to binary vectors)

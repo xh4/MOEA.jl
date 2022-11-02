@@ -1,106 +1,95 @@
-Base.@kwdef struct MOEAD <: AbstractOptimizer
-    # number of the subproblems
-    N::Int = 100
-    # number of the weight vectors in the neighborhoor of each weight vector
-    T::Int = ceil(N/10)
-    crossover = BINX(0.5)
-    mutation = PLM()
-    metrics::ConvergenceMetrics = ConvergenceMetric[GD(), GD(true)]
+Base.@kwdef struct MOEAD <: AbstractAlgorithm
+    N::Int = 100          # number of the subproblems
+    T::Int = ceil(N/10)   # number of the weight vectors in the neighborhoor of each weight vector
 end
-
-population_size(method::MOEAD) = method.N
-default_options(method::MOEAD) = (iterations = 1000,)
-summary(m::MOEAD) =
-    "MOEA/D[P=$(population_size(m)),]"
-show(io::IO, m::MOEAD) = print(io, summary(m))
 
 mutable struct MOEADState <: AbstractOptimizerState
     iteration
+    fcalls
     start_time
     stop_time
-    metrics::ConvergenceMetrics # collection of convergence metrics
 
-    population                  # population
+    N                           # population size
+    population::Population      # population
     m                           # number of objectives
     W                           # weight vectors
     B                           # neighbours of each solution
     z                           # the best value found so far
     EP                          # nondominated solutions
 end
-pfront(s::MOEADState) = s.EP
+pfront(s::MOEADState) = get_non_dominated_solutions(s.population)
 value(s::MOEADState) = objectives(pfront(s))
 minimizer(s::MOEADState) = objectives(pfront(s))
-copy(s::MOEADState) = MOEADState(s.iteration, s.start_time, s.stop_time, copy(s.metrics),
+copy(s::MOEADState) = MOEADState(s.iteration, s.fcalls, s.start_time, s.stop_time,
+                                 s.N,
                                  copy(s.population),
-                                 copy(s.m),
+                                 s.m,
                                  copy(s.W),
                                  copy(s.B),
                                  copy(s.z),
                                  copy(s.EP))
 
-function initial_state(method::MOEAD, objective, population, options)
-    value!(objective, population)
+function initial_state(algorithm::MOEAD, problem, options)
+    population = [Individual(rand(problem.D)) for i in 1:algorithm.N]
+
+    fcalls = evaluate!(problem, population)
 
     m = length(objectives(first(population)))
 
     # Generate weight vectors
-    W = uniform_point(population_size(method), m)
+    W, N = NBI(population_size(algorithm), m)
+
+    population = population[1:N]
 
     # Set the neighbours of each weight vector
     B = pairwise(Euclidean(), W, W, dims=1)
     B = sortperm(B)
-    B = B[:,2:method.T]
+    B = B[:,1:algorithm.T]
 
     # Set reference point
     z = Matrix(minimum(objectives(population), dims=1)')
 
     EP = Individual[]
-    return MOEADState(0, 0, 0, copy(method.metrics), population, m, W, B, z, EP)
+    return MOEADState(0, fcalls, 0, 0, N, population, m, W, B, z, EP)
 end
 
 function update_state!(
-    method::MOEAD,
+    algorithm::MOEAD,
     state,
-    objective,
-    constraints,
+    problem,
     options
 )
-    for i = 1:method.N
+    for i = 1:state.N
         x = state.population[i]
 
         # Reproduction
-        xi = rand(options.rng, state.B[i,:], 2)
+        xi = shuffle(options.rng, state.B[i,:])[1:2]
         xs = state.population[xi]
-        y,_ = method.crossover(xs[1], xs[2], rng=options.rng)
+        y,_ = SBX()(xs[1], xs[2], rng=options.rng)
 
         # Improvement
-        y = method.mutation(y)
+        y = PLM(lower=lower(problem), upper=upper(problem))(y, rng=options.rng)
 
-        apply!(constraints, variables(y))
-        value!(objective, y)
+        apply!(problem.constraints, variables(y))
+
+        evaluate!(state, problem, y)
 
         # Update reference point
-        for j = 1:state.m
-            if state.z[j] > objectives(y)[j]
-                state.z[j] = objectives(y)[j]
-            end
-        end
+        state.z = minimum(hcat(state.z, objectives(y)), dims=2)
 
         # Update of neighboring solutions
         for j = state.B[i,:]
             x = state.population[j]
-            g_x, _ = findmax(state.W[j,:] .* abs.(objectives(x) - state.z))
-            g_y, _ = findmax(state.W[j,:] .* abs.(objectives(y) - state.z))
+            g_x = maximum(state.W[j,:] .* abs.(objectives(x) - state.z))
+            g_y = maximum(state.W[j,:] .* abs.(objectives(y) - state.z))
+            # println(g_y)
             if g_y <= g_x
                 state.population[j] = y
             end
         end
 
         # Update of EP
-        deleteat!(state.EP, findall((p) -> dominate(y, p) == 1, state.EP))
-        if isempty(findall((p) -> dominate(p, y) == 1, state.EP))
-            pushfirst!(state.EP, y)
-        end
+        state.EP = state.population
     end
 
     return false
@@ -128,7 +117,7 @@ function gen_weights(a, b)
     return Array.(w)
 end
 
-function  produce_weight!(a, i, d, H, nobj, w)
+function produce_weight!(a, i, d, H, nobj, w)
     for k=0:d
         if i<nobj
             a[i] = k;

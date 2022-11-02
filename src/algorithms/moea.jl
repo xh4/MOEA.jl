@@ -16,7 +16,7 @@ function dominate(p::T, q::T) where {T<:AbstractArray}
     end
     return ret
 end
-dominate(p::T, q::T) where {T<:Individual} = dominate(objectives(p), objectives(q))
+dominate(p::T, q::T) where {T<:AbstractIndividual} = dominate(objectives(p), objectives(q)) 
 
 """
 dominations(P::AbstractVector)
@@ -38,13 +38,12 @@ dominations(P::Population) = dominations(objectives(P))
 
 # todo: 把 P 转置一下
 """
-    nondominatedsort!(R, F)
+    nondominatedsort(F)
 
-Calculate fronts for fitness values `F`, and store ranks of the individuals into `R`.
+Calculate fronts for fitness values `F`.
 """
-function nondominatedsort!(R, P)
+function nondominatedsort(P)
     n = size(P, 2)
-    @assert length(R) == n "Ranks must be defined for the whole population"
 
     Sₚ = Dict(i => Set() for i = 1:n)
     C = zeros(Int, n)
@@ -63,7 +62,6 @@ function nondominatedsort!(R, P)
             end
         end
         if C[i] == 0
-            R[i] = 1
             push!(F[1], i)
         end
     end
@@ -76,7 +74,6 @@ function nondominatedsort!(R, P)
                 C[j] -= 1
                 if C[j] == 0
                     push!(Q, j)
-                    R[j] = length(F) + 1
                 end
             end
         end
@@ -86,13 +83,42 @@ function nondominatedsort!(R, P)
 
     F #, R #, Sₚ
 end
+
 function nondominatedsort!(P::Population)
-    R = fill(0, length(P))
-    nondominatedsort!(R, objectives(P)')
-    for i = 1:length(P)
-        P[i].rank = R[i]
+    F = nondominatedsort(objectives(P)')
+    for f = 1:length(F)
+        for i in F[f]
+            P[i].rank = f
+        end
     end
     P
+end
+
+function nondominatedsort1(P)
+    n = size(P, 2)
+
+    Sₚ = Dict(i => Set() for i = 1:n)
+    C = zeros(Int, n)
+
+    # construct first front
+    F = []
+    for i = 1:n
+        for j = i+1:n
+            r = dominate(view(P, :, i), view(P, :, j)) #M[i,j]
+            if r == 1
+                push!(Sₚ[i], j)
+                C[j] += 1
+            elseif r == -1
+                push!(Sₚ[j], i)
+                C[i] += 1
+            end
+        end
+        if C[i] == 0
+            push!(F, i)
+        end
+    end
+
+    F
 end
 
 """
@@ -123,7 +149,7 @@ function crowding_distance!(P::Population)
     for i = 1:length(P)
         push!(F[rank(P[i])], i)
     end
-    for f = F
+    for f in F
         C = fill(0.0, length(f))
         crowding_distance!(C, objectives(P[f]))
         for i = 1:length(f)
@@ -223,3 +249,66 @@ Return the non dominated solutions contained in `population`.
 function get_non_dominated_solutions(population)
     return population[get_non_dominated_solutions_perm(population)]
 end
+
+"""
+    nadir(points)
+Computes the nadir point from a provided array of `Vector`s or a population or row vectors
+in a `Matrix`.
+"""
+function nadir(points::Array{Vector{T}})  where T <: Real 
+    (isempty(points) || isempty(points[1])) && return zeros(0)
+    nadir = points[1]
+
+    for point in points
+        nadir = max.(nadir, point)
+    end
+
+    return nadir
+end
+
+function nadir(population)
+    isempty(population) && (return zeros(0))
+    mask = sum_violations.(population) .== 0
+
+    if count(mask) == 0
+        @warn "Nadir point was computed using infeasible solutions. Use `nadir(fvals(population))` to ignore feasibility."
+        return nadir(objectives.(population))
+    end
+
+    nadir(objectives.(population[mask]))
+end
+
+nadir(A::Matrix) = nadir([A[i,:]  for i in 1:size(A,1)])
+
+"""
+    ideal(points)
+Computes the ideal point from a provided array of `Vector`s or a population or row vectors
+in a `Matrix`.
+"""
+function ideal(points::Array{Vector{T}}) where T <: Real 
+
+    (isempty(points) || isempty(points[1])) && return zeros(0)
+    
+    ideal = points[1]
+
+    for point in points
+        ideal = min.(ideal, point)
+    end
+
+    return ideal
+
+end
+
+function ideal(population)
+    isempty(population) && (return zeros(0))
+
+    mask = sum_violations.(population) .== 0
+    if count(mask) == 0
+        @warn "Ideal point was computed using infeasible solutions. Use `ideal(fvals(population))` to ignore feasibility."
+        return ideal(objectives.(population))
+    end
+    
+
+    ideal(objectives.(population[mask]))
+end
+ideal(A::Matrix) = ideal([A[i,:]  for i in 1:size(A,1)])

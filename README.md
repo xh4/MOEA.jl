@@ -9,6 +9,9 @@ Multi-Objective Evolutionary Algorithms in Julia
 - NSGA-II
 - MOEA/D
 - MOEA/D-DE
+- MOEA/D-DRA
+- MOEA/D-AWA
+- SMS-EMOA
 
 ## Problems
 
@@ -37,7 +40,7 @@ result = optimize(sphere,
 ## MOEA/D
 
 ```julia
-zdt, bounds, pareto_solutions = ZDT1()
+zdt, bounds, truepf = ZDT1()
 
 constraints = BoxConstraints(bounds[1,:], bounds[2,:])
 
@@ -46,7 +49,7 @@ method = MOEAD(N=100)
 moead = optimize(zdt,
 		 moead,
 		 constraints = constraints,
-		 population = [Individual([rand() for d in 1:30]) for i in 1:100])
+		 population = [Individual(rand(30)) for i in 1:100])
 ```
 
 
