@@ -9,7 +9,6 @@ function experiment(problems, algorithms; runs = 30)
 
     progress = Progress(
         reduce((n, p) -> n + runs * p.maxFE * length(algorithms), problems, init=0),
-        dt = 0.5,
         barglyphs = BarGlyphs("[=> ]"),
         barlen = 50,
         color = :yellow,
@@ -37,6 +36,7 @@ function experiment(problems, algorithms; runs = 30)
     end
 
     # 运行实验
+    l = Threads.ReentrantLock()
     for i = 1:Threads.nthreads()
         task = Threads.@spawn begin
             while (v = maybepopfirst!(queue)) !== nothing
@@ -48,15 +48,11 @@ function experiment(problems, algorithms; runs = 30)
                     continue
                 end
 
-                prev_state = nothing
+                fcalls = 0
                 state_callback = function (state)
                     try
-                        if prev_state === nothing
-                            next!(progress, step=state.fcalls)
-                        else
-                            next!(progress, step=state.fcalls-prev_state.fcalls)
-                        end
-
+                        next!(progress, step=state.fcalls-fcalls)
+                        fcalls = state.fcalls
                     catch e
                         @error "Error in state callback!" exception = e
                         Base.show_backtrace(stderr, catch_backtrace())
@@ -70,7 +66,12 @@ function experiment(problems, algorithms; runs = 30)
                     result[1, problem_index, algorithm_index, run] = igd
                     result[2, problem_index, algorithm_index, run] = hv
 
-                    save_run(problem, algorithm, igd, hv)
+                    lock(l)
+                    try
+                        save_run(problem, algorithm, igd, hv)
+                    finally
+                        unlock(l)
+                    end
                 end
 
                 population_size = algorithm.N
@@ -93,6 +94,7 @@ function experiment(problems, algorithms; runs = 30)
         push!(tasks, task)
     end
     map(fetch, tasks)
+    finish!(progress)
 
     # 处理结果
     for (indicator_index, indicator) in enumerate(indicators)
