@@ -55,9 +55,7 @@ function benchmark(problem, algorithm; runs = 30)
     end
 
     map(fetch, tasks)
-    finish_callback = function (state)
-        finish!(progress)
-    end
+    finish!(progress)
 
     @assert length(igds) == runs
     @assert length(hvs) == runs
