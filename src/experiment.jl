@@ -128,11 +128,6 @@ function experiment(problems, algorithms; runs = 30)
                         ) for run = 1:runs
                     ]
                     main_mean = mean(main_values)
-                    if indicator_index == 1 && problem_index == 5 && algorithm_index == 2
-                        println(this_values)
-                        println("--------")
-                        println(main_values)
-                    end
                     ranksum_symbol = "?"
                     p = pvalue(MannWhitneyUTest(this_values, main_values))
                     # 有明显差异
