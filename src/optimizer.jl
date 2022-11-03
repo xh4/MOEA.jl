@@ -50,7 +50,7 @@ Base.@kwdef struct Options{TCallback<:Union{Nothing,Function},TRNG<:AbstractRNG}
     successive_f_tol::Int = 10
     iterations::Int = 1000
     maxFE::Int = 10000
-    store_trace::Bool = true
+    store_trace::Bool = false
     show_trace::Bool = false
     show_every::Int = 1
     callback::TCallback = nothing

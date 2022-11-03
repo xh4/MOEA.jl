@@ -38,7 +38,7 @@ function benchmark(problem, algorithm; runs = 30)
                 time_stop = time()
                 duration = time_stop - time_start
                 push!(times, duration)
-                state = result.trace[end]
+                state = result.state
                 igd = IGD(pfront(state), problem.truepf)
                 push!(igds, igd)
                 hv = HV(pfront(state), problem.truepf)
