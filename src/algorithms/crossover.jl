@@ -88,20 +88,25 @@ SHFX(v1::T, v2::T; rng::AbstractRNG = Random.default_rng()) where {T<:AbstractIn
 
 Uniform crossover between `v1` and `v2` individuals.
 """
-function UX(v1::T, v2::T; rng::AbstractRNG = Random.default_rng()) where {T<:AbstractVector}
-    l = length(v1)
-    c1 = copy(v1)
-    c2 = copy(v2)
-    xch = rand(rng, Bool, l)
-    for i = 1:l
-        if xch[i]
-            vswap!(c1, c2, i)
+function UX()
+    function ux(v1::T, v2::T; rng::AbstractRNG = Random.default_rng()) where {T<:AbstractVector}
+        l = length(v1)
+        c1 = copy(v1)
+        c2 = copy(v2)
+        xch = rand(rng, Bool, l)
+        for i = 1:l
+            if xch[i]
+                vswap!(c1, c2, i)
+            end
         end
+        return c1, c2
     end
-    return c1, c2
+    function ux(v1::T, v2::T; rng::AbstractRNG = Random.default_rng()) where {T<:AbstractIndividual}
+        map(T, ux(variables(v1), variables(v2), rng=rng))
+    end
+    ux
 end
-UX(v1::T, v2::T; rng::AbstractRNG = Random.default_rng()) where {T<:AbstractIndividual} = 
-    map(T, UX(variables(v1), variables(v2), rng=rng))
+
 
 """
     BINX(Cr::Real=0.5)
@@ -524,36 +529,36 @@ PMX(v1::T, v2::T; rng::AbstractRNG = Random.default_rng()) where {T<:AbstractInd
 Order crossover constructs an offspring by choosing a substring of one parent
 and preserving the relative order of the elements of the other parent.
 """
-function OX1(
-    v1::T,
-    v2::T;
-    rng::AbstractRNG = Random.default_rng(),
-) where {T<:AbstractVector}
-    s = length(v1)
-    from, to = rand(rng, 1:s, 2)
-    from, to = from > to ? (to, from) : (from, to)
-    c1 = zero(v1)
-    c2 = zero(v2)
-    # Swap
-    c1[from:to] = v2[from:to]
-    c2[from:to] = v1[from:to]
-    # Fill in from parents
-    k = to + 1 > s ? 1 : to + 1 #child1 index
-    j = to + 1 > s ? 1 : to + 1 #child2 index
-    for i in vcat(to+1:s, 1:from-1)
-        while in(v1[k], c1)
-            k = k + 1 > s ? 1 : k + 1
+function OX1()
+    function ox1(v1::T, v2::T; rng::AbstractRNG = Random.default_rng()) where {T<:AbstractVector}
+        s = length(v1)
+        from, to = rand(rng, 1:s, 2)
+        from, to = from > to ? (to, from) : (from, to)
+        c1 = zero(v1)
+        c2 = zero(v2)
+        # Swap
+        c1[from:to] = v2[from:to]
+        c2[from:to] = v1[from:to]
+        # Fill in from parents
+        k = to + 1 > s ? 1 : to + 1 #child1 index
+        j = to + 1 > s ? 1 : to + 1 #child2 index
+        for i in vcat(to+1:s, 1:from-1)
+            while in(v1[k], c1)
+                k = k + 1 > s ? 1 : k + 1
+            end
+            c1[i] = v1[k]
+            while in(v2[j], c2)
+                j = j + 1 > s ? 1 : j + 1
+            end
+            c2[i] = v2[j]
         end
-        c1[i] = v1[k]
-        while in(v2[j], c2)
-            j = j + 1 > s ? 1 : j + 1
-        end
-        c2[i] = v2[j]
+        return c1, c2
     end
-    return c1, c2
+    function ox1(v1::T, v2::T; rng::AbstractRNG = Random.default_rng()) where {T<:AbstractIndividual}
+        map(T, ox1(variables(v1), variables(v2), rng=rng))
+    end
+    ox1
 end
-OX1(v1::T, v2::T; rng::AbstractRNG = Random.default_rng()) where {T<:AbstractIndividual} = 
-    map(T, OX1(variables(v1), variables(v2), rng=rng))
 
 """
     CX(v1, v2)

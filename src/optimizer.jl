@@ -59,6 +59,7 @@ Base.@kwdef struct Options{TCallback<:Union{Nothing,Function},TRNG<:AbstractRNG}
     rng::TRNG = Random.default_rng()
     state_callback = nothing
     finish_callback = nothing
+    show_progress = true
 end
 
 function show(io::IO, o::Options)

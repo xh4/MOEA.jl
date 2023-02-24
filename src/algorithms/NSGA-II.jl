@@ -2,6 +2,8 @@ Base.@kwdef struct NSGAII <: AbstractAlgorithm
     N::Int = 100
 end
 
+name(_::NSGAII) = "NSGA-II"
+
 mutable struct NSGAIIIndividual <: AbstractIndividual
     variables::AbstractVector
     objectives::Union{AbstractVector, Number, Nothing}
@@ -25,15 +27,13 @@ mutable struct NSGAIIState <: AbstractOptimizerState
     start_time
     stop_time
 
-    population                  # population
-    pfront                      # individuals of the first Pareto front
+    population
 end
-pfront(s::NSGAIIState) = s.pfront
+pfront(s::NSGAIIState) = get_non_dominated_solutions(s.population)
 value(s::NSGAIIState) = objectives(s.population)
 minimizer(s::NSGAIIState) = variables(s.population)
 copy(s::NSGAIIState) = NSGAIIState(s.iteration, s.fcalls, s.start_time, s.stop_time,
-                                 copy(s.population),
-                                 copy(s.pfront))
+                                 copy(s.population))
 
 function ranks(P::Population)
     map(rank, P)
@@ -54,12 +54,11 @@ function calcF(P::Population)
 end
 
 function initial_state(algorithm::NSGAII, problem, options)
-    population = [NSGAIIIndividual(rand(problem.D)) for i in 1:algorithm.N]
+    population = map(NSGAIIIndividual, initial_population(algorithm, problem))
     fcalls = evaluate!(problem, population)
     nondominatedsort!(population)
     crowding_distance!(population)
-    pfront = filter(i -> rank(i) == 1, population)
-    return NSGAIIState(0, fcalls, 0, 0, population, pfront)
+    return NSGAIIState(0, fcalls, 0, 0, population)
 end
 
 function update_state!(
@@ -69,36 +68,20 @@ function update_state!(
     options
 )
     parents = state.population
-    offspring = copy(parents)
-
-    # select parents for mating
     selected = tournament(2, select = twowaycomp)(hcat(ranks(parents), -distances(parents))', algorithm.N; rng = options.rng)
+    offspring = evolute(state, problem, selected, rng=options.rng)
+    combine = [parents; offspring]
 
-    # perform mating
-    recombine!(offspring, parents, selected, SBX(), rng = options.rng)
+    # Calculate ranks & crowding distances for individuals
+    nondominatedsort!(combine)
+    crowding_distance!(combine)
 
-    # perform mutation
-    mutate!(offspring, PLM(lower=lower(problem), upper=upper(problem)), rng = options.rng)
-
-    # handle constraint
-    map(x -> apply!(problem.constraints, variables(x)), offspring)
-
-    evaluate!(state, problem, offspring)
-
-    population = [parents; offspring]
-
-    # calculate ranks & crowding for population
-    nondominatedsort!(population)
-    crowding_distance!(population)
-
-    ### println(filter(d -> d == -Inf, map(distance, filter(i -> rank(i) == 1, population))))
-
-    # select best individuals
+    # Select best individuals
     fitidx = Int[]
-    F = calcF(population)
+    F = calcF(combine)
     for f in F
         if length(fitidx) + length(f) > algorithm.N
-            idxs = f[reverse(sortperm(map(distance, population[f])))]
+            idxs = f[reverse(sortperm(map(distance, combine[f])))]
             append!(fitidx, idxs[1:(algorithm.N-length(fitidx))])
             break
         else
@@ -106,10 +89,6 @@ function update_state!(
         end
     end
 
-    state.pfront = filter(i -> rank(i) == 1, population)
-
-    # construct new parent population
-    parents .= population[fitidx]
-
+    state.population .= combine[fitidx]
     return false
 end

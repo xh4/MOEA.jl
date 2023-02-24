@@ -10,6 +10,8 @@ Base.@kwdef struct MOEADAWA <: AbstractAlgorithm
     rate_evol = 0.8              # percentage of computing resources assgned to adaptive weight vecgtor adjustment
 end
 
+name(_::MOEADAWA) = "MOEA/D-AWA"
+
 mutable struct MOEADAWAState <: AbstractOptimizerState
     iteration::Any
     fcalls::Any
@@ -17,7 +19,7 @@ mutable struct MOEADAWAState <: AbstractOptimizerState
     stop_time::Any
 
     N::Any                           # population size
-    population::Population      # population
+    population::Population           # population
     W::Any                           # weight vectors
     B::Any                           # neighbours of each solution
     z::Any                           # the best value found so far
@@ -46,12 +48,12 @@ copy(s::MOEADAWAState) = MOEADAWAState(
 )
 
 function initial_state(algorithm::MOEADAWA, problem, options)
-    population = [Individual(rand(problem.D)) for i = 1:algorithm.N]
+    population = initial_population(algorithm, problem)
 
     fcalls = evaluate!(problem, population)
 
     # Generate weight vectors
-    W, N = NBI(population_size(algorithm), problem.M)
+    W, N = TwoLayer(algorithm.N, problem.M)
 
     W = transform_weights(W)
 
@@ -113,11 +115,7 @@ function update_state!(algorithm::MOEADAWA, state, problem, options)
 
         # Reproduction
         xi = shuffle(options.rng, P)[1:2]
-        xs = state.population[xi]
-        y, _ = SBX()(xs[1], xs[2], rng = options.rng)
-        y = PLM(lower = lower(problem), upper = upper(problem))(y, rng = options.rng)
-        apply!(problem.constraints, variables(y))
-        evaluate!(state, problem, y)
+        y = evolute1(state, problem, xi, rng=options.rng)
 
         # Update reference point
         state.z = minimum(hcat(state.z, objectives(y)), dims = 2)

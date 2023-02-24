@@ -9,7 +9,6 @@ end
 function benchmark(problem, algorithm; runs = 30)
     igds = []
     hvs = []
-    times = []
     progress = Progress(
         runs * problem.maxFE,
         barglyphs = BarGlyphs("[=> ]"),
@@ -27,7 +26,6 @@ function benchmark(problem, algorithm; runs = 30)
     for i = 1:Threads.nthreads()
         task = Threads.@spawn begin
             while (run = maybepopfirst!(queue)) !== nothing
-                time_start = time()
                 fcalls = 0
                 state_callback = function (state)
                     next!(progress, step=state.fcalls - fcalls)
@@ -35,9 +33,6 @@ function benchmark(problem, algorithm; runs = 30)
                 end
                 result =
                     optimize(problem, algorithm, options = Options(state_callback = state_callback))
-                time_stop = time()
-                duration = time_stop - time_start
-                push!(times, duration)
                 state = result.state
                 igd = IGD(pfront(state), problem.truepf)
                 push!(igds, igd)
@@ -68,15 +63,15 @@ function benchmark(problem, algorithm; runs = 30)
     hv_max = maximum(hvs)
     hv_mean = mean(hvs)
     hv_std = std(hvs)
-    time_min = minimum(times)
-    time_max = maximum(times)
-    time_mean = mean(times)
 
-    table_data = [[1:runs; "Means (Std.)"] [igds; "$(igd_mean) ($(igd_std))"] [
-        hvs
-        "$(hv_mean) ($(hv_std))"
-    ] [times; time_mean]]
-    table_header = [typeof(problem), "IGD", "HV", "Time"]
+    fmt7 = n -> @sprintf("%.7f", n)
+    fmt4 = n -> @sprintf("%.4f", n)
+
+    table_data = [[1:runs; "Means (Std.)"] [map(fmt7, igds); "$(fmt7(igd_mean)) ($(fmt7(igd_std)))"] [
+        map(fmt7, hvs)
+        "$(fmt7(hv_mean)) ($(fmt7(hv_std)))"
+    ]]
+    table_header = [typeof(problem), "IGD", "HV"]
     h1 = Highlighter((data, i, j) -> (i == size(data)[1]), bold = true)
     h2 = Highlighter(
         (data, i, j) -> (j == 2 && data[i, j] == igd_max),
@@ -98,20 +93,10 @@ function benchmark(problem, algorithm; runs = 30)
         bold = true,
         foreground = :red,
     )
-    h6 = Highlighter(
-        (data, i, j) -> (j == 4 && data[i, j] == time_min),
-        bold = true,
-        foreground = :green,
-    )
-    h7 = Highlighter(
-        (data, i, j) -> (j == 4 && data[i, j] == time_max),
-        bold = true,
-        foreground = :red,
-    )
     pretty_table(
         table_data,
         header = table_header,
-        highlighters = (h1, h2, h3, h4, h5, h6, h7),
+        highlighters = (h1, h2, h3, h4, h5),
     )
     # BenchmarkResult(problem, algorithm, runs, igds, hvs)
 end

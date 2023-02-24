@@ -4,8 +4,6 @@
 Calculate a generational distance between set `A` and the reference set `R`.
 This metric measures the convergence, i.e. closeness of the non-dominated solutions
 to the Pareto front, of a population.
-
-*Note:* Parameters are column-major matrices.
 """
 function GD(A::AbstractMatrix, R::AbstractMatrix)
     na, da = size(A)

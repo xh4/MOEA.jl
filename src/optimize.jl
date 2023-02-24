@@ -18,6 +18,16 @@ function optimize(
     #     push!(trace, copy(state))
     # end
 
+    if options.show_progress
+        progress = Progress(
+            problem.maxFE,
+            barglyphs = BarGlyphs("[=> ]"),
+            barlen = 50,
+            color = :yellow,
+        )
+    end
+
+    fcalls = 0
     while !stopped
         iteration += 1
         state.iteration = iteration
@@ -40,6 +50,11 @@ function optimize(
             options.state_callback(state)
         end
 
+        if options.show_progress
+            next!(progress, step = state.fcalls-fcalls)
+        end
+        fcalls = state.fcalls
+
         if state.fcalls >= problem.maxFE
             stopped = true
         end
@@ -51,6 +66,10 @@ function optimize(
 
     if options.finish_callback !== nothing
         options.finish_callback(state)
+    end
+
+    if options.show_progress
+        finish!(progress)
     end
 
     return OptimizationResult(

@@ -6,6 +6,8 @@ Base.@kwdef struct MOEADDRA <: AbstractAlgorithm
     nr = ceil(N/100)
 end
 
+name(_::MOEADDRA) = "MOEA/D-DRA"
+
 mutable struct MOEADDRAState <: AbstractOptimizerState
     iteration
     fcalls
@@ -42,7 +44,7 @@ function initial_state(algorithm::MOEADDRA, problem, options)
     fcalls = evaluate!(problem, population)
 
     # Generate weight vectors
-    W, N = NBI(population_size(algorithm), problem.M)
+    W, N = TwoLayer(population_size(algorithm), problem.M)
 
     population = population[1:N]
 
@@ -89,15 +91,7 @@ function update_state!(
 
         # Reproduction
         xi = rand(options.rng, P, 2)
-        xs = state.population[xi]
-        y = copy(x)
-        differentiation!(y, xs; F=algorithm.F)
-
-        # Improvement
-        y = PLM(lower = lower(problem), upper = upper(problem))(y, rng = options.rng)
-
-        apply!(problem.constraints, variables(y))
-        evaluate!(state, problem, y)
+        y = evolute1_DE(state, problem, xi, rng=options.rng)
 
         # Update reference point
         state.z = minimum(hcat(state.z, objectives(y)), dims=2)

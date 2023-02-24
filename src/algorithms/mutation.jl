@@ -13,17 +13,24 @@
 
 Returns an in-place mutated binary `recombinant` with a bit flips at random positions.
 """
-function flip(
-    recombinant::T;
-    rng::AbstractRNG = Random.default_rng(),
-) where {T<:AbstractVector{Bool}}
-    s = length(recombinant)
-    pos = rand(rng, 1:s)
-    recombinant[pos] = !recombinant[pos]
-    return recombinant
+function Flip(pm::Real = NaN)
+    function flip(
+        recombinant::T;
+        rng::AbstractRNG = Random.default_rng(),
+    ) where {T<:AbstractVector{Bool}}
+        d = length(recombinant)
+        if isnan(pm)
+            pm = 1.0 / d
+        end
+        pos = rand(rng, d) .< pm
+        recombinant[pos] .= .!recombinant[pos]
+        return recombinant
+    end
+    function flip(recombinant::T; rng::AbstractRNG = Random.default_rng(),) where {T<:AbstractIndividual}
+        T(flip(variables(recombinant), rng=rng))
+    end
+    return flip
 end
-flip(recombinant::T; rng::AbstractRNG = Random.default_rng(),) where {T<:AbstractIndividual} = 
-    T(flip(variables(recombinant), rng=rng))
 
 """
     bitinversion(recombinant)
@@ -314,17 +321,21 @@ insertion(recombinant::T; rng::AbstractRNG = Random.default_rng(),) where {T<:Ab
 
 Returns an in-place mutated individual with a two random elements of the genome are swapped.
 """
-function swap2(
-    recombinant::T;
-    rng::AbstractRNG = Random.default_rng(),
-) where {T<:AbstractVector}
-    l = length(recombinant)
-    from, to = randseg(rng, l)
-    swap!(recombinant, from, to)
-    return recombinant
+function Swap2()
+    function swap2(
+        recombinant::T;
+        rng::AbstractRNG = Random.default_rng(),
+    ) where {T<:AbstractVector}
+        l = length(recombinant)
+        from, to = randseg(rng, l)
+        swap!(recombinant, from, to)
+        return recombinant
+    end
+    function swap2(recombinant::T; rng::AbstractRNG = Random.default_rng(),) where {T<:AbstractIndividual}
+        T(swap2(variables(recombinant), rng = rng))
+    end
+    swap2
 end
-swap2(recombinant::T; rng::AbstractRNG = Random.default_rng(),) where {T<:AbstractIndividual} = 
-    T(swap2(variables(recombinant), rng = rng))
 
 """
     scramble(recombinant)
@@ -441,3 +452,25 @@ function differentiation!(
 end
 differentiation!(recombinant::T, mutators::Vector{T}; F::Real = 1.0,) where {T<:AbstractIndividual} =
     T(differentiation!(variables(recombinant), variables(mutators), F=F))
+
+# Utilities
+# =====
+function randseg(rng::AbstractRNG, l)
+    from, to = rand(rng, 1:l, 2)
+    if from == to
+        if to < l
+            to += 1
+        else
+            from -= 1
+        end
+    elseif from > to
+        from, to = to, from
+    end
+    return (from,to)
+end
+
+function swap!(v::T, from::Int, to::Int) where {T <: AbstractVector}
+    val = v[from]
+    v[from] = v[to]
+    v[to] = val
+end

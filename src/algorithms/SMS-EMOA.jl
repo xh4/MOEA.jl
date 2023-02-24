@@ -2,6 +2,8 @@ Base.@kwdef struct SMSEMOA <: AbstractAlgorithm
     N::Int = 100          # number of the subproblems
 end
 
+name(_::SMSEMOA) = "SMS-EMOA"
+
 Base.@kwdef mutable struct SMSEMOAIndividual <: AbstractIndividual
     variables
     objectives
@@ -34,7 +36,7 @@ minimizer(s::SMSEMOAState) = objectives(pfront(s))
 copy(s::SMSEMOAState) = SMSEMOAState(s.iteration, s.fcalls, s.start_time, s.stop_time, copy(s.population), copy(s.pfront))
 
 function initial_state(algorithm::SMSEMOA, problem, options)
-    population = [SMSEMOAIndividual(rand(problem.D)) for i in 1:algorithm.N]
+    population = map(SMSEMOAIndividual, initial_population(algorithm, problem))
     fcalls = evaluate!(problem, population)
 
     return SMSEMOAState(0, fcalls, 0, 0, population, pfront)
@@ -49,12 +51,7 @@ function update_state!(
     population = state.population
 
     for i = 1:algorithm.N
-        # Generate offspring by variation
-        parents = population[rand(options.rng, 1:algorithm.N, 2)]
-        offspring, _ = SBX()(parents[1], parents[2], rng = options.rng)
-        offspring = PLM(lower=lower(problem), upper=upper(problem))(offspring, rng = options.rng)
-        apply!(problem.constraints, variables(offspring))
-        evaluate!(state, problem, offspring)
+        offspring = evolute1(state, problem, rand(options.rng, 1:algorithm.N, 2), rng=options.rng)
         push!(population, offspring)
 
         nondominatedsort!(population)

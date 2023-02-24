@@ -30,7 +30,12 @@ function hypervolume(front::Array{Vector{T}}, reference_point::Vector) where {T<
         # @warn "Ignoring $ign points dominated by the reference point ($rel points are used)."
     end
 
-    return FPL(relevantPoints, reference_point)
+    M = length(reference_point)
+    if M < 4
+        FPL(relevantPoints, reference_point)
+    else
+        hv_monte_carlo(relevantPoints, reference_point)
+    end
 end
 
 function hypervolume(front::AbstractMatrix, reference_point::Vector)
@@ -47,6 +52,23 @@ function HV(pfront::T, truepf::T) where {T<:AbstractMatrix}
     hypervolume(pfront, ref_point)
 end
 
+function HV(pfront::AbstractMatrix, optimum::AbstractVector)
+    N, M = size(pfront)
+    fmin = minimum(vcat(minimum(pfront, dims=1), zeros(1,M)), dims=1)
+    fmax = optimum'
+    pfront = (pfront - repeat(fmin, N, 1)) ./ repeat((fmax-fmin)*1.1, N, 1)
+    ref_point = fill(1.0, M)
+    hypervolume(pfront, ref_point)
+end
+
+function HV(pfront::Population, problem::AbstractProblem)
+    HV(objectives(pfront), problem.truepf)
+end
+
 function HV(pfront::Population, truepf::Population)
     HV(objectives(pfront), objectives(truepf))
+end
+
+function HV(pfront::AbstractMatrix, truepf::Population)
+    HV(pfront, objectives(truepf))
 end

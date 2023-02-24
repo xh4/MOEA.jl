@@ -18,6 +18,7 @@ ZDT 测试函数的特点:
 
 abstract type ZDT <: AbstractProblem end
 
+encoding(::ZDT) = :real
 parameter_properties(::ZDT) = [:D, :maxFE]
 
 struct ZDT1 <: ZDT

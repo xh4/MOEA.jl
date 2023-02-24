@@ -1,4 +1,4 @@
-Base.@kwdef struct MOEADURAW <: AbstractAlgorithm
+Base.@kwdef struct MOEADUR <: AbstractAlgorithm
     N::Int = 100                 # number of the subproblems
     T::Int = ceil(N/10)          # number of the weight vectors in the neighborhoor of each weight vector
     delta = 0.8
@@ -8,9 +8,9 @@ Base.@kwdef struct MOEADURAW <: AbstractAlgorithm
     nus = rate_update_weight * N # maximal number of subproblems needed to be adjusted
 end
 
-name(_::MOEADURAW) = "MOEA/D-URAW"
+name(_::MOEADUR) = "MOEA/D-UR"
 
-mutable struct MOEADURAWState <: AbstractOptimizerState
+mutable struct MOEADURState <: AbstractOptimizerState
     iteration::Any
     fcalls::Any
     start_time::Any
@@ -23,10 +23,10 @@ mutable struct MOEADURAWState <: AbstractOptimizerState
     z::Any                           # the best value found so far
     EP::Any                          # external population
 end
-pfront(s::MOEADURAWState) = get_non_dominated_solutions(s.population)
-value(s::MOEADURAWState) = objectives(pfront(s))
-minimizer(s::MOEADURAWState) = objectives(pfront(s))
-copy(s::MOEADURAWState) = MOEADURAWState(
+pfront(s::MOEADURState) = get_non_dominated_solutions(s.population)
+value(s::MOEADURState) = objectives(pfront(s))
+minimizer(s::MOEADURState) = objectives(pfront(s))
+copy(s::MOEADURState) = MOEADURState(
     s.iteration,
     s.fcalls,
     s.start_time,
@@ -39,8 +39,8 @@ copy(s::MOEADURAWState) = MOEADURAWState(
     copy(s.EP),
 )
 
-function initial_state(algorithm::MOEADURAW, problem, options)
-    population = initial_population(algorithm, problem)
+function initial_state(algorithm::MOEADUR, problem, options)
+    population = [Individual(rand(problem.D)) for i = 1:algorithm.N]
 
     fcalls = evaluate!(problem, population)
 
@@ -58,7 +58,7 @@ function initial_state(algorithm::MOEADURAW, problem, options)
 
     EP = Individual[]
 
-    return MOEADURAWState(
+    return MOEADURState(
         0,
         fcalls,
         0,
@@ -72,7 +72,7 @@ function initial_state(algorithm::MOEADURAW, problem, options)
     )
 end
 
-function update_state!(algorithm::MOEADURAW, state, problem, options)
+function update_state!(algorithm::MOEADUR, state, problem, options)
     offspring = copy(state.population)
     O = Individual[]
 
@@ -184,29 +184,4 @@ function update_state!(algorithm::MOEADURAW, state, problem, options)
     end
 
     return false
-end
-
-function uniformly_randomly_points(M, N)
-    W1 = Matrix(1.0I, M, M)
-    W1 = vcat(W1, ones(1, M) ./ M)
-
-    W2 = rand(5000, M)
-    W2 = W2 ./ repeat(sum(W2, dims = 2), 1, M)
-
-    while size(W1, 1) < N
-        index = find_index_with_largest_distance(W1, W2)
-        W1 = vcat(W1, W2[index, :]')
-        # delete `index`th row of W2
-        W2 = vcat(W2[1:index-1, :], W2[index+1:end, :])
-    end
-
-    W1 = broadcast((v) -> max(v, 1e-6), W1)
-    N = size(W1, 1)
-    W1, N
-end
-
-function find_index_with_largest_distance(W1, W2)
-    distance = pairwise(Euclidean(), W2, W1, dims = 1)
-    temp = sort(distance, dims = 2)
-    sortperm(temp[:, 1])[end]
 end

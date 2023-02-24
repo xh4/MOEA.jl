@@ -84,6 +84,10 @@ function nondominatedsort(P)
     F #, R #, Sₚ
 end
 
+function nondominatedsort(P::Population)
+    nondominatedsort(objectives(P)')
+end
+
 function nondominatedsort!(P::Population)
     F = nondominatedsort(objectives(P)')
     for f = 1:length(F)
@@ -119,6 +123,10 @@ function nondominatedsort1(P)
     end
 
     F
+end
+
+function nondominatedsort1(P::Population)
+    nondominatedsort1(objectives(P)')
 end
 
 """
@@ -312,3 +320,31 @@ function ideal(population)
     ideal(objectives.(population[mask]))
 end
 ideal(A::Matrix) = ideal([A[i,:]  for i in 1:size(A,1)])
+
+function gen_ref_dirs(dimension, n_paritions)
+    gen_weights(dimension, n_paritions)
+end
+
+function gen_weights(a, b)
+    nobj = a;
+    H    = b;
+    a    = zeros(nobj);
+    d    = H;
+    w    = [];
+    produce_weight!(a, 1, d, H, nobj, w)
+    return Array.(w)
+end
+
+function produce_weight!(a, i, d, H, nobj, w)
+    for k=0:d
+        if i<nobj
+            a[i] = k;
+            d2   = d - k;
+            produce_weight!(a, i+1, d2, H, nobj, w);
+        else
+            a[i] = d;
+            push!(w, a/H)
+            break;
+        end
+    end
+end

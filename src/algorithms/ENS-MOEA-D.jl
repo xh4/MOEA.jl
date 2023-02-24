@@ -101,15 +101,7 @@ function update_state!(
 
         # Reproduction
         xi = rand(options.rng, P, 2)
-        xs = state.population[xi]
-        y = copy(x)
-        differentiation!(y, xs; F=method.F)
-
-        # Improvement
-        y,_ = method.crossover(y, x, rng=options.rng)
-
-        apply!(constraints, variables(y))
-        value!(objective, y)
+        y = evolute1_DE(state, problem, xi, rng=options.rng)
 
         # Update reference point
         for j = 1:state.m

@@ -1,5 +1,6 @@
 abstract type WFG <: AbstractProblem end
 
+encoding(::WFG) = :real
 parameter_properties(::WFG) = [:M, :D, :K, :maxFE]
 
 struct WFG1 <: WFG

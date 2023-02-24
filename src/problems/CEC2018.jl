@@ -120,7 +120,7 @@ function get_PF(f, nondominate)
 end
 
 function DF3_Plot()
-    anim = @animate for t in 50:10:440
+    anim = @animate for t in 50:10:840
         ps = MOEA.DF3_PS(t, 10, 20)
         pf = MOEA.DF3_PF(t, 10, 20)
         p = Plots.plot(title="DF3", lw=2, layout=(1,2), size=(850, 400))

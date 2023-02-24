@@ -2,7 +2,7 @@ module MOEA
 
 using Random, LinearAlgebra, Statistics
 using TOML
-using JLD
+using JLD2
 using UnPack: @unpack
 using StackViews
 using Plots
@@ -37,7 +37,8 @@ import Base:
     sortperm!
 import Distances:
     pairwise,
-    Euclidean
+    Euclidean,
+    CosineDist
 # using Colors
 # using CImGui
 # using CImGui.ImGuiGLFWBackend
@@ -59,6 +60,9 @@ using ConcurrentCollections
 using ProgressMeter
 using PrettyTables
 using HypothesisTests
+using Hyperscript: @tags, savehtml
+import DefaultApplication
+using StatsBase
 
 export optimize,
     benchmark,
@@ -101,6 +105,8 @@ export optimize,
     WFG7,
     WFG8,
     WFG9,
+    MOKP,
+    MOTSP,
     truepf,
     sphere,
     ackley,
@@ -111,9 +117,14 @@ export optimize,
     MOEADDRA,
     MOEADAWA,
     MOEADURAW,
+    MOEADUR,
     MOEADMY,
     SMSEMOA,
     SMSEMOAdp,
+    RVEA,
+    NSGAIII,
+    ANSGAIII,
+    ARMOEA,
     pfront,
     ### SELECTION
     ranklinear,
@@ -147,7 +158,7 @@ export optimize,
     ### MUTATION
     ## GA
     # binary
-    flip,
+    Flip,
     inversion,
     # real value
     uniform,
@@ -169,6 +180,8 @@ include("termination.jl")
 include("result.jl")
 include("constraints.jl")
 include("parameter.jl")
+include("problem.jl")
+include("algorithm.jl")
 include("optimize.jl")
 include("benchmark.jl")
 include("experiment.jl")
@@ -176,34 +189,43 @@ include("experiment.jl")
 include("indicators/GD.jl")
 include("indicators/IGD.jl")
 include("indicators/hypervolume/FPL.jl")
+include("indicators/hypervolume/MonteCarlo.jl")
 include("indicators/HV.jl")
 include("indicators/Spread.jl")
 
-include("algorithm.jl")
-include("algorithms/selection.jl")
-include("algorithms/crossover.jl")
-include("algorithms/mutation.jl")
-include("algorithms/moea.jl")
-include("algorithms/NBI.jl")
-include("algorithms/ga.jl")
+include("algorithms/Selection.jl")
+include("algorithms/Crossover.jl")
+include("algorithms/Mutation.jl")
+include("algorithms/Evolution.jl")
+include("algorithms/UniformPoints.jl")
+include("algorithms/GA.jl")
 include("algorithms/DE.jl")
+include("algorithms/MOEA.jl")
 include("algorithms/NSGA-II.jl")
+include("algorithms/NSGA-III.jl")
+include("algorithms/A-NSGA-III.jl")
 include("algorithms/MOEA-D.jl")
 include("algorithms/MOEA-D-DE.jl")
 include("algorithms/MOEA-D-DRA.jl")
 include("algorithms/MOEA-D-AWA.jl")
 include("algorithms/MOEA-D-URAW.jl")
-# include("algorithms/MOEA-D-MY.jl")
+include("algorithms/MOEA-D-UR.jl")
+include("algorithms/MOEA-D-MY.jl")
+include("algorithms/MOEA-D-MY2.jl")
+include("algorithms/MOEA-D-MY3.jl")
 include("algorithms/SMS-EMOA.jl")
 include("algorithms/SMS-EMOA-dp.jl")
+include("algorithms/RVEA.jl")
+include("algorithms/AR-MOEA.jl")
 
-include("problem.jl")
 include("problems/ZDT.jl")
 include("problems/DTLZ.jl")
 include("problems/WFG.jl")
 include("problems/CEC2018.jl")
 include("problems/Sphere.jl")
 include("problems/Ackley.jl")
+include("problems/MOKP.jl")
+include("problems/MOTSP.jl")
 
 include("database.jl")
 include("utilities.jl")

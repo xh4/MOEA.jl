@@ -63,7 +63,7 @@ end
 function save_run(problem, algorithm, igd, hv)
     ensure_db()
     DBInterface.execute(db, "INSERT INTO runs (problem, algorithm, igd, hv, time) VALUES (?, ?, ?, ?, ?)", 
-                            [identifier(problem), identifier(algorithm), igd, hv, time()])
+                            [identifier(problem), identifier(algorithm), isnan(igd) ? 0 : igd, isnan(hv) ? 0 : hv, time()])
 end
 
 function fetch_runs(problem, algorithm, n = 30)

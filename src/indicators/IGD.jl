@@ -5,3 +5,5 @@ Calculate an inverted generational distance, [`gd`](@ref), between set `S` and t
 Parameters are column-major matrices.
 """
 IGD(S, R) = GD(R, S)
+
+IGD(S, R::AbstractProblem) = IGD(S, R.truepf)

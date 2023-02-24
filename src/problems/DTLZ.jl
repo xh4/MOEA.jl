@@ -1,5 +1,6 @@
 abstract type DTLZ <: AbstractProblem end
 
+encoding(::DTLZ) = :real
 parameter_properties(::DTLZ) = [:M, :D, :maxFE]
 
 generic_sphere(ref_dirs) = ref_dirs ./ ([norm(v) for v in eachrow(ref_dirs)])
@@ -62,7 +63,7 @@ struct DTLZ1 <: DTLZ
     truepf
 end
 
-function DTLZ1(; M = 3, D = M + 4, maxFE = 10_000, n = 10_000)
+function DTLZ1(; M = 3, D = M + 4, maxFE = 10_000, N = 10_000)
     function dtlz1(x)
         g = DTLZ_g1(x, M)
         fx = fill(0.5*(1 + g), M)
@@ -72,7 +73,7 @@ function DTLZ1(; M = 3, D = M + 4, maxFE = 10_000, n = 10_000)
     bounds = Array([zeros(D) ones(D)]')
     constraints = BoxConstraints(bounds)
 
-    pf, _ = NBI(n, M)
+    pf, _ = TwoLayer(N, M)
     pf = 0.5pf
     truepf = [ Individual(zeros(D), fx) for fx in eachrow(pf) ]
 
@@ -103,7 +104,7 @@ struct DTLZ2 <: DTLZ
     truepf
 end
 
-function DTLZ2(; M = 3, D = M + 9, maxFE = 10_000, n = 10_000)
+function DTLZ2(; M = 3, D = M + 9, maxFE = 10_000, N = 10_000)
     function dtlz2(x)
         g = DTLZ_g2(x, M)
         fx = fill(1.0 + g, M)
@@ -113,7 +114,7 @@ function DTLZ2(; M = 3, D = M + 9, maxFE = 10_000, n = 10_000)
     bounds = Array([zeros(D) ones(D)]')
     constraints = BoxConstraints(bounds)
 
-    ref_dirs, _ = NBI(n, M)
+    ref_dirs, _ = TwoLayer(N, M)
     pf = generic_sphere(ref_dirs)
     truepf = [ Individual(zeros(D), fx) for fx in eachrow(pf) ]
 
@@ -144,7 +145,7 @@ struct DTLZ3 <: DTLZ
     truepf
 end
 
-function DTLZ3(; M = 3, D = M + 9, maxFE = 10_000, n = 10_000)
+function DTLZ3(; M = 3, D = M + 9, maxFE = 10_000, N = 10_000)
     function dtlz3(x)
         g = DTLZ_g1(x, M)
         fx = fill(1 + g, M)
@@ -154,7 +155,7 @@ function DTLZ3(; M = 3, D = M + 9, maxFE = 10_000, n = 10_000)
     bounds = Array([zeros(D) ones(D)]')
     constraints = BoxConstraints(bounds)
 
-    ref_dirs, _ = NBI(n, M)
+    ref_dirs, _ = TwoLayer(N, M)
     pf = generic_sphere(ref_dirs)
     truepf = [ Individual(zeros(D), fx) for fx in eachrow(pf) ]
 
@@ -186,7 +187,7 @@ struct DTLZ4 <: DTLZ
     truepf
 end
 
-function DTLZ4(; M = 3, D = M + 9, maxFE = 10_000, n = 10_000)
+function DTLZ4(; M = 3, D = M + 9, maxFE = 10_000, N = 10_000)
     function dtlz4(x)
         g = DTLZ_g2(x, M)
         fx = fill(1.0 + g, M)
@@ -196,7 +197,7 @@ function DTLZ4(; M = 3, D = M + 9, maxFE = 10_000, n = 10_000)
     bounds = Array([zeros(D) ones(D)]')
     constraints = BoxConstraints(bounds)
 
-    ref_dirs, _ = NBI(n, M)
+    ref_dirs, _ = TwoLayer(N, M)
     pf = generic_sphere(ref_dirs)
     truepf = [ Individual(zeros(D), fx) for fx in eachrow(pf) ]
 
@@ -223,7 +224,7 @@ struct DTLZ5 <: DTLZ
     truepf
 end
 
-function DTLZ5(; M = 3, D = M + 9, maxFE = 10_000, n = 10_000)
+function DTLZ5(; M = 3, D = M + 9, maxFE = 10_000, N = 10_000)
     function dtlz5(x)
         g = DTLZ_g2(x, M)
         fθ = fill(1.0 + g, M)
@@ -236,17 +237,12 @@ function DTLZ5(; M = 3, D = M + 9, maxFE = 10_000, n = 10_000)
     bounds = Array([zeros(D) ones(D)]')
     constraints = BoxConstraints(bounds)
 
-    if M == 3
-        ref_dirs, _ = NBI(n, 2)
-        X = fill(0.5, size(ref_dirs)[1], D)
+    R = hcat(0:1/(N-1):1, 1:-1/(N-1):0)
+    R = R./repeat(sqrt.(sum(R.^2,dims=2)),1,size(R)[2])
+    R = hcat(R[:,fill(1,M-2)], R)
+    R = R./sqrt(2).^repeat([M-2;M-2:-1:0],1,size(R)[1])'
+    truepf = [ Individual([], R[i,:]) for i in 1:size(R)[1] ]
 
-        for i in 1:size(ref_dirs)[1]
-            X[i,1:2] = ref_dirs[i,:]
-        end
-        truepf = [ Individual(X[i,:], dtlz5(X[i,:])) for i in 1:size(ref_dirs)[1] ]
-    else
-        truepf = []
-    end
     return DTLZ5(M, D, maxFE, dtlz5, constraints, truepf)
 end
 
@@ -271,7 +267,7 @@ struct DTLZ6 <: DTLZ
     truepf
 end
 
-function DTLZ6(; M = 3, D = M + 9, maxFE = 10_000, n = 10_000)
+function DTLZ6(; M = 3, D = M + 9, maxFE = 10_000, N = 10_000)
     function dtlz6(x)
         g = sum(x[M:end] .^ 0.1)
         fθ = fill(1.0 + g, M)
@@ -284,17 +280,11 @@ function DTLZ6(; M = 3, D = M + 9, maxFE = 10_000, n = 10_000)
     bounds = Array([zeros(D) ones(D)]')
     constraints = BoxConstraints(bounds)
 
-    if M == 3
-        ref_dirs, _ = NBI(n, 2)
-        X = fill(0.0, size(ref_dirs)[1], D)
-
-        for i in 1:size(ref_dirs)[1]
-            X[i,1:2] = ref_dirs[i,:]
-        end
-        truepf = [ Individual(X[i,:], dtlz6(X[i,:])) for i in 1:size(ref_dirs)[1] ]
-    else
-        truepf = []
-    end
+    R = hcat(0:1/(N-1):1, 1:-1/(N-1):0)
+    R = R./repeat(sqrt.(sum(R.^2,dims=2)),1,size(R)[2])
+    R = hcat(R[:,fill(1,M-2)], R)
+    R = R./sqrt(2).^repeat([M-2;M-2:-1:0],1,size(R)[1])'
+    truepf = [ Individual([], R[i,:]) for i in 1:size(R)[1] ]
 
     return DTLZ6(M, D, maxFE, dtlz6, constraints, truepf)
 end

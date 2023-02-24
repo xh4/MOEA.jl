@@ -3,6 +3,8 @@ Base.@kwdef struct MOEAD <: AbstractAlgorithm
     T::Int = ceil(N/10)   # number of the weight vectors in the neighborhoor of each weight vector
 end
 
+name(_::MOEAD) = "MOEA/D"
+
 mutable struct MOEADState <: AbstractOptimizerState
     iteration
     fcalls
@@ -30,14 +32,14 @@ copy(s::MOEADState) = MOEADState(s.iteration, s.fcalls, s.start_time, s.stop_tim
                                  copy(s.EP))
 
 function initial_state(algorithm::MOEAD, problem, options)
-    population = [Individual(rand(problem.D)) for i in 1:algorithm.N]
+    population = initial_population(algorithm, problem)
 
     fcalls = evaluate!(problem, population)
 
     m = length(objectives(first(population)))
 
     # Generate weight vectors
-    W, N = NBI(population_size(algorithm), m)
+    W, N = TwoLayer(population_size(algorithm), m)
 
     population = population[1:N]
 
@@ -50,11 +52,12 @@ function initial_state(algorithm::MOEAD, problem, options)
     z = Matrix(minimum(objectives(population), dims=1)')
 
     EP = Individual[]
+
     return MOEADState(0, fcalls, 0, 0, N, population, m, W, B, z, EP)
 end
 
 function update_state!(
-    algorithm::MOEAD,
+    ::MOEAD,
     state,
     problem,
     options
@@ -64,15 +67,7 @@ function update_state!(
 
         # Reproduction
         xi = shuffle(options.rng, state.B[i,:])[1:2]
-        xs = state.population[xi]
-        y,_ = SBX()(xs[1], xs[2], rng=options.rng)
-
-        # Improvement
-        y = PLM(lower=lower(problem), upper=upper(problem))(y, rng=options.rng)
-
-        apply!(problem.constraints, variables(y))
-
-        evaluate!(state, problem, y)
+        y = evolute1(state, problem, xi, rng=options.rng)
 
         # Update reference point
         state.z = minimum(hcat(state.z, objectives(y)), dims=2)
@@ -82,7 +77,6 @@ function update_state!(
             x = state.population[j]
             g_x = maximum(state.W[j,:] .* abs.(objectives(x) - state.z))
             g_y = maximum(state.W[j,:] .* abs.(objectives(y) - state.z))
-            # println(g_y)
             if g_y <= g_x
                 state.population[j] = y
             end
@@ -93,42 +87,6 @@ function update_state!(
     end
 
     return false
-end
-
-# 参考 https://github.com/stevengj/Sobol.jl ？
-# 这里使用 Das and Dennis's method
-function uniform_point(N, M)
-    # gen_ref_dirs 会生成 N+1 个...，需修复
-    reduce(vcat, gen_ref_dirs(M, N-1)')
-    # gen_ref_dirs(M, N-1)
-end
-
-function gen_ref_dirs(dimension, n_paritions)
-    gen_weights(dimension, n_paritions)
-end
-
-function gen_weights(a, b)
-    nobj = a;
-    H    = b;
-    a    = zeros(nobj);
-    d    = H;
-    w    = [];
-    produce_weight!(a, 1, d, H, nobj, w)
-    return Array.(w)
-end
-
-function produce_weight!(a, i, d, H, nobj, w)
-    for k=0:d
-        if i<nobj
-            a[i] = k;
-            d2   = d - k;
-            produce_weight!(a, i+1, d2, H, nobj, w);
-        else
-            a[i] = d;
-            push!(w, a/H)
-            break;
-        end
-    end
 end
 
 function Base.sortperm(M::Matrix)

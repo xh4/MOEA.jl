@@ -5,3 +5,7 @@ img
 Notebooks
 imgui.ini
 .vscode
+
+/plots
+/tmp
+/settings
